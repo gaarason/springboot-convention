@@ -3,7 +3,12 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.4.7</version>
+        <relativePath/>
+    </parent>
     <groupId>com.github.gaarason</groupId>
     <artifactId>springboot-convention</artifactId>
     <version>1.0-SNAPSHOT</version>
@@ -11,29 +16,182 @@
     <description>Common project framework</description>
 
     <modules>
-        <module>common-static</module>
-        <module>webflux-spring-boot-starter</module>
-        <module>webflux-spring-boot-starter-test</module>
-        <module>web-spring-boot-starter</module>
-        <module>web-spring-boot-starter-test</module>
+        <module>convention-common</module>
+        <module>convention-common-model</module>
     </modules>
 
     <properties>
         <java.version>1.8</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+        <convention.spring-cloud-alibaba.version>2.2.6.RELEASE</convention.spring-cloud-alibaba.version>
+        <convention.spring-cloud.version>2020.0.3</convention.spring-cloud.version>
+        <convention.disruptor.version>3.4.4</convention.disruptor.version>
+        <convention.skywalking.version>8.5.0</convention.skywalking.version>
+        <convention.okhttp3.version>4.9.1</convention.okhttp3.version>
+        <convention.redisson.version>3.16.0</convention.redisson.version>
+        <convention.mysql.version>8.0.25</convention.mysql.version>
+        <convention.druid.version>1.2.6</convention.druid.version>
+        <convention.mybits.version>2.2.0</convention.mybits.version>
+        <convention.mybits-plus.version>3.4.3.1</convention.mybits-plus.version>
+        <convention.javaee.version>8.0.1</convention.javaee.version>
+        <convention.swagger.version>3.0.0</convention.swagger.version>
+        <convention.swagger-annotations.version>1.5.20</convention.swagger-annotations.version>
+        <convention.spock.version>2.0-groovy-3.0</convention.spock.version>
+        <convention.groovy.version>3.0.8</convention.groovy.version>
+        <!-- JaCoCo Properties -->
+        <jacoco.version>0.8.6</jacoco.version>
+        <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
+        <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
+        <sonar.jacoco.reportPath>${project.basedir}/../target/jacoco.exec</sonar.jacoco.reportPath>
+        <sonar.language>java</sonar.language>
+        <sonar.exclusions>**/org/**/*.java,**/reactor/**/*.java,**/feign/**/*.java</sonar.exclusions>
+        <!-- JaCoCo Properties  end-->
+        <!--解决乱码的问题-->
+        <argLine>-Dfile.encoding=UTF-8</argLine>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- 外部依赖 start -->
+            <dependency>
+                <groupId>com.alibaba.cloud</groupId>
+                <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+                <version>${convention.spring-cloud-alibaba.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${convention.spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>okhttp</artifactId>
+                <version>${convention.okhttp3.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson-spring-boot-starter</artifactId>
+                <version>${convention.redisson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>mysql</groupId>
+                <artifactId>mysql-connector-java</artifactId>
+                <version>${convention.mysql.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>druid-spring-boot-starter</artifactId>
+                <version>${convention.druid.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mybatis.spring.boot</groupId>
+                <artifactId>mybatis-spring-boot-starter</artifactId>
+                <version>${convention.mybits.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-boot-starter</artifactId>
+                <version>${convention.mybits-plus.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>javax</groupId>
+                <artifactId>javaee-api</artifactId>
+                <version>${convention.javaee.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.springfox</groupId>
+                <artifactId>springfox-boot-starter</artifactId>
+                <version>${convention.swagger.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.swagger</groupId>
+                <artifactId>swagger-annotations</artifactId>
+                <version>${convention.swagger-annotations.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.spockframework</groupId>
+                <artifactId>spock-core</artifactId>
+                <version>${convention.spock.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.spockframework</groupId>
+                <artifactId>spock-spring</artifactId>
+                <version>${convention.spock.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.codehaus.groovy</groupId>
+                <artifactId>groovy-all</artifactId>
+                <version>${convention.groovy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.codehaus.groovy</groupId>
+                <artifactId>groovy</artifactId>
+                <version>${convention.groovy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.codehaus.groovy</groupId>
+                <artifactId>groovy-json</artifactId>
+                <version>${convention.groovy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.skywalking</groupId>
+                <artifactId>apm-toolkit-trace</artifactId>
+                <version>${convention.skywalking.version}</version>
+            </dependency>
+            <!-- Needed for Async Logging with Log4j 2 -->
+            <dependency>
+                <groupId>com.lmax</groupId>
+                <artifactId>disruptor</artifactId>
+                <version>${convention.disruptor.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.skywalking</groupId>
+                <artifactId>apm-toolkit-log4j-2.x</artifactId>
+                <version>${convention.skywalking.version}</version>
+            </dependency>
+            <!-- 外部依赖 end -->
+
+            <!-- 内部依赖 start -->
+            <dependency>
+                <groupId>com.github.gaarason</groupId>
+                <artifactId>convention-common-model</artifactId>
+                <version>1.0-SNAPSHOT</version>
+            </dependency>
+            <!-- 内部依赖 end -->
+        </dependencies>
+    </dependencyManagement>
+
+
     <build>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.1</version>
                 <configuration>
                     <source>1.8</source>
                     <target>1.8</target>
                     <encoding>UTF-8</encoding>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

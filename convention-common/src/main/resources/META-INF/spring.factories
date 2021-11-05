@@ -1,0 +1,5 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+gaarason.convention.common.autoconfigure.BootConfiguration
+
+org.springframework.context.ApplicationListener=\
+gaarason.convention.common.autoconfigure.LoggingEnvironmentPreparedListener

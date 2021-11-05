@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 日志级别以及优先级排序: OFF > FATAL > ERROR > WARN > INFO > DEBUG > TRACE > ALL -->
+<!-- status 用来指定log4j本身的打印日志的级别. monitorinterval 用于指定log4j自动重新配置的监测间隔时间，单位是s,最小是5s. -->
+<!-- 黑色:black 红色:red 绿色:green 黄色:yellow 蓝色:blue 紫色:magenta 青色:cyan 白色:white -->
+<Configuration status="info">
+    <Appenders>
+        <!-- 控制台日志 -->
+        <Console name="ConsoleLog" target="SYSTEM_OUT">
+            <PatternLayout pattern="${sys:ykj.log-spring.console-pattern}"/>
+            <ThresholdFilter level="${sys:ykj.log-spring.console-level}"/>
+        </Console>
+
+        <!-- json风格日志 异步时建议immediateFlush="false"关闭每次刷新 -->
+        <RollingRandomAccessFile name="JsonFileLog"
+                                 fileName="${sys:ykj.log-spring.file-dir}/json/json.log"
+                                 filePattern="${sys:ykj.log-spring.file-dir}/json/json.%d{yyyy-MM-dd}.log"
+                                 immediateFlush="true"
+                                 append="true">
+            <PatternLayout pattern="${sys:ykj.log-spring.json-pattern}"/>
+            <ThresholdFilter level="${sys:ykj.log-spring.json-level}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+            </Policies>
+        </RollingRandomAccessFile>
+
+        <!-- skyWalking日志 -->
+        <GRPCLogClientAppender name="GrpcLog">
+            <PatternLayout pattern="${sys:ykj.log-spring.skywalking-pattern}"/>
+            <ThresholdFilter level="${sys:ykj.log-spring.skywalking-level}"/>
+        </GRPCLogClientAppender>
+    </Appenders>
+
+    <Loggers>
+        <Root level="ALL">
+            <AppenderRef ref="ConsoleLog"/>
+            <AppenderRef ref="JsonFileLog"/>
+            <AppenderRef ref="GrpcLog"/>
+        </Root>
+    </Loggers>
+</Configuration>
