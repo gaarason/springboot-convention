@@ -2,7 +2,6 @@ package gaarason.convention.common.provider;
 
 import gaarason.convention.common.appointment.FinalVariable;
 import gaarason.convention.common.autoconfigure.ConventionProperties;
-import gaarason.convention.common.model.context.ChainContext;
 import gaarason.convention.common.model.pojo.ResultVO;
 import gaarason.convention.common.util.SpringUtils;
 import okhttp3.Request;
@@ -72,114 +71,6 @@ public class LogProvider {
     }
 
     /**
-     * 设置 ChainContext 里面存在的所有属性
-     */
-    public static void pushChainContext() {
-        for (Map.Entry<ChainProvider.ChainEnum, String> entry : ChainProvider.getAll().entrySet()) {
-            LogProvider.pushSomething(entry.getKey().name(), entry.getValue());
-        }
-    }
-
-    /**
-     * 设置 ChainContext 里面存在的所有属性
-     * @param attributes 用于补偿的存储对象
-     */
-    public static void pushChainContext(final Map<String, Object> attributes) {
-        for (Map.Entry<ChainProvider.ChainEnum, String> entry : ChainProvider.getAll().entrySet()) {
-            LogProvider.pushSomething(entry.getKey().name(), entry.getValue(), attributes);
-        }
-    }
-
-    /**
-     * 补充设置 traceId
-     */
-    public void pushTraceId() {
-        String traceId = pullTraceId();
-        if (traceId == null) {
-            pushSomething(FinalVariable.LogEnum.TRACE_ID.name(), FinalVariable.GENERATE_TRACE_ID.get());
-        }
-    }
-
-    /**
-     * 设置 traceId
-     * @param traceId traceId
-     */
-    public void pushTraceId(String traceId) {
-        pushSomething(FinalVariable.LogEnum.TRACE_ID.name(), traceId);
-    }
-
-
-    /**
-     * 设置 traceId
-     * @param traceId    traceId
-     * @param attributes 用于补偿的存储对象
-     */
-    public void pushTraceId(String traceId, Map<String, Object> attributes) {
-        pushSomething(FinalVariable.LogEnum.TRACE_ID.name(), traceId, attributes);
-    }
-
-    /**
-     * 获取当前线程的 traceId
-     * @return traceId
-     */
-    public String pullTraceId() {
-        return MDC.get(FinalVariable.LogEnum.TRACE_ID.name());
-    }
-
-    /**
-     * 设置 TraceId 里面存在的所有属性
-     * @param attributes 用于补偿的存储对象
-     */
-    public static void pushTraceId(final Map<String, Object> attributes) {
-
-    }
-
-    /**
-     * 设置 requestMethod
-     * @param requestMethod http方法
-     * @param attributes    用于补偿的存储对象
-     */
-    public static void pushRequestMethod(final String requestMethod, final Map<String, Object> attributes) {
-        LogProvider.pushSomething(FinalVariable.LogEnum.REQUEST_METHOD.name(), requestMethod.toLowerCase(), attributes);
-    }
-
-    /**
-     * 设置 requestHeader
-     * @param headersMap http请求头
-     * @param attributes 用于补偿的存储对象
-     */
-    public static void pushRequestHeader(final Map<String, List<String>> headersMap, final Map<String, Object> attributes) {
-        LogProvider.pushSomething(FinalVariable.LogEnum.REQUEST_HEADER_STRING.name(), headersMap.toString(), attributes);
-    }
-
-    /**
-     * 设置请求时间
-     * @param requestDatetime 请求时间
-     * @param attributes      用于补偿的存储对象
-     */
-    public static void pushRequestDatetime(final String requestDatetime, final Map<String, Object> attributes) {
-        LogProvider.pushSomething(FinalVariable.LogEnum.REQUEST_DATETIME.name(), requestDatetime, attributes);
-    }
-
-    /**
-     * 设置请求后端URL
-     * @param requestRealUrl 后端地址
-     * @param attributes     用于补偿的存储对象
-     */
-    public static void pushRequestRealUrl(final String requestRealUrl, final Map<String, Object> attributes) {
-        LogProvider.pushSomething(FinalVariable.LogEnum.REQUEST_REAL_URL.name(), requestRealUrl, attributes);
-    }
-
-    /**
-     * 设置请求URL
-     * @param requestUrl 请求地址
-     * @param attributes 用于补偿的存储对象
-     */
-    public static void pushRequestUrl(final String requestUrl, final Map<String, Object> attributes) {
-        LogProvider.pushSomething(FinalVariable.LogEnum.REQUEST_URL.name(), requestUrl, attributes);
-    }
-
-    /**
      * http 警告日志
      * @param resultVO 响应
      * @param e        异常
@@ -187,46 +78,6 @@ public class LogProvider {
     public static void printHttpProviderSendingResponseWarningLog(final ResultVO<?> resultVO, @Nullable final Throwable e) {
         LogProvider.LOGGER.warn("Http service sending response,【{}】{}", resultVO.getCode(), resultVO.getMessage(), e);
         LogProvider.markAlreadySentHttpResponse();
-    }
-
-    /**
-     * 设置 requestMethod
-     * @param requestMethod http方法
-     */
-    public static void pushRequestMethod(final String requestMethod) {
-        LogProvider.pushSomething(FinalVariable.LogEnum.REQUEST_METHOD.name(), requestMethod.toLowerCase());
-    }
-
-    /**
-     * 设置 requestHeader
-     * @param headersMap http请求头
-     */
-    public static void pushRequestHeader(final Map<String, List<String>> headersMap) {
-        LogProvider.pushSomething(FinalVariable.LogEnum.REQUEST_HEADER_STRING.name(), headersMap.toString());
-    }
-
-    /**
-     * 设置请求时间
-     * @param requestDatetime 请求时间
-     */
-    public static void pushRequestDatetime(final String requestDatetime) {
-        LogProvider.pushSomething(FinalVariable.LogEnum.REQUEST_DATETIME.name(), requestDatetime);
-    }
-
-    /**
-     * 设置请求后端URL
-     * @param requestRealUrl 后端地址
-     */
-    public static void pushRequestRealUrl(final String requestRealUrl) {
-        LogProvider.pushSomething(FinalVariable.LogEnum.REQUEST_REAL_URL.name(), requestRealUrl);
-    }
-
-    /**
-     * 设置请求URL
-     * @param requestUrl 请求地址
-     */
-    public static void pushRequestUrl(final String requestUrl) {
-        LogProvider.pushSomething(FinalVariable.LogEnum.REQUEST_URL.name(), requestUrl);
     }
 
     /**
@@ -240,26 +91,10 @@ public class LogProvider {
     }
 
     /**
-     * 补偿, 从MAP中获取, 并记录到 MDC
-     * 用于手动解决线程切换的问题
-     * @param attributes map
-     */
-    public static void compensationSomething(final Map<String, Object> attributes) {
-        for (final FinalVariable.LogEnum logEnumKey : FinalVariable.LogEnum.values()) {
-            final String key = logEnumKey.name();
-            final Object value = attributes.get(key);
-            if (null == value) {
-                continue;
-            }
-            LogProvider.pushSomething(key, String.valueOf(value));
-        }
-    }
-
-    /**
      * 设置 已经发送结果
      */
     public static void markAlreadySentHttpResponse() {
-        MDC.put(FinalVariable.LogEnum.SENT_HTTP_RESPONSE.name(), FinalVariable.SENT_HTTP_RESPONSE);
+        ChainProvider.put(ChainProvider.CanNotCrossProcessKey.SENT_HTTP_RESPONSE, FinalVariable.SENT_HTTP_RESPONSE);
     }
 
     /**
@@ -267,7 +102,7 @@ public class LogProvider {
      * @return 是否
      */
     public static boolean sentHttpResponse() {
-        return FinalVariable.SENT_HTTP_RESPONSE.equals(MDC.get(FinalVariable.LogEnum.SENT_HTTP_RESPONSE.name()));
+        return FinalVariable.SENT_HTTP_RESPONSE.equals(ChainProvider.get(ChainProvider.CanNotCrossProcessKey.SENT_HTTP_RESPONSE));
     }
 
     /**
@@ -281,62 +116,14 @@ public class LogProvider {
         attributes.put(key, value);
     }
 
-    /**
-     * 记录到 MDC
-     * @param key   键
-     * @param value 值
-     */
-    protected static void pushSomething(final String key, final String value) {
-        MDC.put(key, value);
-    }
-
-    /**
-     * 获取当前线程的 MDC 中存在的所有信息
-     * 可在 compensationSomething(Map<String, Object> attributes) 中使用
-     * @return MDC中的信息
-     */
-    public static Map<String, Object> pull() {
-        final HashMap<String, Object> map = new HashMap<>(16);
-        for (final FinalVariable.LogEnum logEnumKey : FinalVariable.LogEnum.values()) {
-            final String key = logEnumKey.name();
-            final String value = MDC.get(key);
-            if (null == value) {
-                continue;
-            }
-            map.put(key, value);
-        }
-        return map;
-    }
-
-    /**
-     * 将MDC中的值赋值到 map
-     * 并在traceId不存在时赋值 (不会影响MDC)
-     * @param attributes map
-     */
-    public static void push(final Map<String, Object> attributes) {
-        final Map<String, Object> everything = LogProvider.pull();
-        for (final FinalVariable.LogEnum logEnumKey : FinalVariable.LogEnum.values()) {
-            final String key = logEnumKey.name();
-            final Object value = everything.get(key);
-            if (null == value) {
-                continue;
-            }
-            attributes.put(key, String.valueOf(value));
-        }
-        // if (attributes.get(FinalVariable.LogEnum.TRACE_ID.name()) == null) {
-        // attributes.put(FinalVariable.LogEnum.TRACE_ID.name(), FinalVariable.GENERATE_TRACE_ID.get());
-        // }
-    }
 
     /**
      * 清空
      */
     public static void clear(final Map<String, Object> attributes) {
         LogProvider.LOGGER.debug("Cleaning up in MDC && Map");
-        for (final FinalVariable.LogEnum value : FinalVariable.LogEnum.values()) {
-            attributes.remove(value.name());
-            MDC.remove(value.name());
-        }
+        ChainProvider.clear();
+        ChainProvider.clear(attributes);
     }
 
     /**
@@ -344,9 +131,7 @@ public class LogProvider {
      */
     public static void clear() {
         LogProvider.LOGGER.debug("Cleaning up in MDC");
-        for (final FinalVariable.LogEnum value : FinalVariable.LogEnum.values()) {
-            MDC.remove(value.name());
-        }
+        ChainProvider.clear();
     }
 
     /**
@@ -373,8 +158,10 @@ public class LogProvider {
     public void printHttpProviderReceivedRequestLog() {
         if (conventionProperties.getHttp().getLog().isProviderReceivedRequest()) {
             LogProvider.LOGGER.info("Http service received request, url[{}], real url[{}], header[{}], method[{}].",
-                MDC.get(FinalVariable.LogEnum.REQUEST_URL.name()), MDC.get(FinalVariable.LogEnum.REQUEST_REAL_URL.name()),
-                MDC.get(FinalVariable.LogEnum.REQUEST_HEADER_STRING.name()), MDC.get(FinalVariable.LogEnum.REQUEST_METHOD.name()));
+                ChainProvider.get(ChainProvider.CanNotCrossProcessKey.REQUEST_URL),
+                ChainProvider.get(ChainProvider.CanNotCrossProcessKey.REQUEST_REAL_URL),
+                ChainProvider.get(ChainProvider.CanNotCrossProcessKey.REQUEST_HEADER_STRING),
+                ChainProvider.get(ChainProvider.CanNotCrossProcessKey.REQUEST_METHOD));
         }
     }
 
@@ -392,12 +179,13 @@ public class LogProvider {
      * @param bodyClosure 响应内容
      */
     public void printHttpProviderSendingResponseLog(final Supplier<String> bodyClosure) {
-        final boolean b = LogProvider.sentHttpResponse();
         // 配置需要记录
         if (conventionProperties.getHttp().getLog().isProviderSendingResponse() && !LogProvider.sentHttpResponse()) {
             LogProvider.LOGGER.info("Http service sending response, url[{}], real url[{}], method[{}], response[{}].",
-                MDC.get(FinalVariable.LogEnum.REQUEST_URL.name()), MDC.get(FinalVariable.LogEnum.REQUEST_REAL_URL.name()),
-                MDC.get(FinalVariable.LogEnum.REQUEST_METHOD.name()), bodyClosure.get());
+                ChainProvider.get(ChainProvider.CanNotCrossProcessKey.REQUEST_URL),
+                ChainProvider.get(ChainProvider.CanNotCrossProcessKey.REQUEST_REAL_URL),
+                ChainProvider.get(ChainProvider.CanNotCrossProcessKey.REQUEST_METHOD),
+                bodyClosure.get());
             // 标记已发送
             LogProvider.markAlreadySentHttpResponse();
         }
@@ -408,14 +196,7 @@ public class LogProvider {
      * @param obj 响应内容
      */
     public void printHttpProviderSendingResponseLog(final Object obj) {
-        // 配置需要记录
-        if (conventionProperties.getHttp().getLog().isProviderSendingResponse() && !LogProvider.sentHttpResponse()) {
-            LogProvider.LOGGER.info("Http service sending response, url[{}], real url[{}], method[{}], response[{}].",
-                MDC.get(FinalVariable.LogEnum.REQUEST_URL.name()), MDC.get(FinalVariable.LogEnum.REQUEST_REAL_URL.name()),
-                MDC.get(FinalVariable.LogEnum.REQUEST_METHOD.name()), obj.toString());
-            // 标记已发送
-            LogProvider.markAlreadySentHttpResponse();
-        }
+        printHttpProviderSendingResponseLog(obj::toString);
     }
 
     /**

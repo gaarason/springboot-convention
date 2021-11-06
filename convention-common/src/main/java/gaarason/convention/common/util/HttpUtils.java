@@ -23,9 +23,15 @@ import java.util.zip.GZIPInputStream;
  */
 public class HttpUtils {
 
-    private static final int          TIMEOUT      = 6;
+    private static final int TIMEOUT = 6;
 
-    private static final String       CONTENT_TYPE = "Content-Type";
+    private static final String HTTP_HEADER_CONTENT_TYPE = "Content-Type";
+
+    private static final String HTTP_HEADER_CONNECTION = "Connection";
+
+    private static final String HTTP_HEADER_ACCEPT_ENCODING = "Accept-Encoding";
+
+    private static final String HTTP_HEADER_ACCEPT_CHARSET = "Accept-Charset";
 
     private static final OkHttpClient DEFAULT_HTTP_CLIENT;
 
@@ -91,6 +97,7 @@ public class HttpUtils {
         @Nullable
         private MediaType mediaType;
 
+        @Nullable
         private String logBodyCache;
 
         private final LogProvider logProvider;
@@ -106,29 +113,24 @@ public class HttpUtils {
         private boolean acceptEncodingGzip = false;
 
         /**
-         * 是否传递 上下文信息
+         * 是否传递通过请求头传递 上下文信息
+         * 手动设置的优先级更高
          */
-        private boolean chainTransfer = true;
-
-
-        /**
-         * 是否将 上下文信息 附加到 url参数上
-         */
-        private boolean chainWithUrl = true;
+        private boolean chainTransferWithHeader = true;
 
         /**
-         * 默认开启 keepAlive
+         * 是否传递通过请求url传递 上下文信息
+         * 手动设置的优先级更高
          */
-        private boolean keepAlive = true;
+        private boolean chainTransferWithUrl = false;
 
         public RequestBuilder(OkHttpClient httpClient) {
             this.httpClient = httpClient;
             logProvider = LogProvider.getInstance();
-        }
 
-        public RequestBuilder url(URL url) {
-            this.url = url.toString();
-            return this;
+            setHeader(HTTP_HEADER_ACCEPT_CHARSET, "UTF-8");
+            setHeader(HTTP_HEADER_CONNECTION, "keep-alive");
+            setHeader(HTTP_HEADER_ACCEPT_ENCODING, "");
         }
 
         public RequestBuilder url(String url) {
@@ -136,20 +138,32 @@ public class HttpUtils {
             return this;
         }
 
+        public RequestBuilder url(URL url) {
+            return url(url.toString());
+        }
+
         /**
          * url 发下 query 参数
          * @param url       url
-         * @param paramsMap 参数map(后续可优化为 Map<String, Object> 类型, 当目前还没有时间.)
+         * @param paramsMap 参数map
          * @return 请求构造器
          */
         public RequestBuilder url(String url, Map<String, Object> paramsMap) {
-            this.url = url;
-            mapQuery.putAll(paramsMap);
-            return this;
+            url(url);
+            return setQuery(paramsMap);
         }
 
         public RequestBuilder url(HttpUrl url) {
-            this.url = url.toString();
+            return url(url.toString());
+        }
+
+        public RequestBuilder setQuery(String name, Object value) {
+            mapQuery.put(name, value);
+            return this;
+        }
+
+        public RequestBuilder setQuery(Map<String, Object> paramsMap) {
+            mapQuery.putAll(paramsMap);
             return this;
         }
 
@@ -228,6 +242,11 @@ public class HttpUtils {
             return ObjectUtils.isEmpty(value) ? this : setHeader(name, value);
         }
 
+        /**
+         * 移除请求头
+         * @param name 键
+         * @return 请求构造器
+         */
         public RequestBuilder removeHeader(String name) {
             headers.removeAll(name);
             return this;
@@ -239,8 +258,7 @@ public class HttpUtils {
          * @return 请求构造器
          */
         public RequestBuilder setKeepAlive(boolean open) {
-            keepAlive = open;
-            return this;
+            return setHeader(HTTP_HEADER_CONNECTION, open ? "keep-alive" : "close");
         }
 
         /**
@@ -250,6 +268,7 @@ public class HttpUtils {
          */
         public RequestBuilder setAcceptEncodingGzip(boolean deal) {
             acceptEncodingGzip = deal;
+            setHeader(HTTP_HEADER_ACCEPT_ENCODING, deal ? "gzip" : "");
             return this;
         }
 
@@ -258,8 +277,8 @@ public class HttpUtils {
          * @param deal 开/关
          * @return 请求构造器
          */
-        public RequestBuilder setChainTransfer(boolean deal) {
-            chainTransfer = deal;
+        public RequestBuilder setChainTransferWithHeader(boolean deal) {
+            chainTransferWithHeader = deal;
             return this;
         }
 
@@ -269,7 +288,7 @@ public class HttpUtils {
          * @return 请求构造器
          */
         public RequestBuilder setChainCodeWithUrl(boolean deal) {
-            chainWithUrl = deal;
+            chainTransferWithUrl = deal;
             return this;
         }
 
@@ -344,19 +363,19 @@ public class HttpUtils {
         public RequestBuilder setJsonBody(String jsonString) {
             lockBodyType(BodyType.JSON);
             stringBody = jsonString;
-            return setHeader(HttpUtils.CONTENT_TYPE, "application/json;charset=utf-8");
+            return setHeader(HttpUtils.HTTP_HEADER_CONTENT_TYPE, "application/json;charset=utf-8");
         }
 
         public RequestBuilder setJsonBody(Serializable value) {
             lockBodyType(BodyType.JSON);
             stringBody = JsonUtils.objectToJson(value);
-            return setHeader(HttpUtils.CONTENT_TYPE, "application/json;charset=utf-8");
+            return setHeader(HttpUtils.HTTP_HEADER_CONTENT_TYPE, "application/json;charset=utf-8");
         }
 
         public RequestBuilder setXmlBody(String value) {
             lockBodyType(BodyType.XML);
             stringBody = value;
-            return setHeader(HttpUtils.CONTENT_TYPE, "application/xml;charset=utf-8");
+            return setHeader(HttpUtils.HTTP_HEADER_CONTENT_TYPE, "application/xml;charset=utf-8");
         }
 
         public RequestBuilder setBody(String value, @Nullable MediaType mediaType) {
@@ -466,13 +485,13 @@ public class HttpUtils {
          * 请求url构造
          */
         protected void urlBuild() {
-            // 设置上下文到 url 上
-            if (chainWithUrl && tenantCode != null && !tenantCode.isEmpty()) {
-                for (String key : FinalVariable.TENANT_CODE_IN_HTTP_HEADER_AND_QUERY) {
-                    mapQuery.put(key, tenantCode);
+            // 设置上下文到 url 上, 且使用下划线风格
+            if (chainTransferWithUrl) {
+                for (Map.Entry<String, String> entry : ChainProvider.get(ChainProvider.ChainType.CAN_CROSS_PROCESS).entrySet()) {
+                    // 只有不存在时才设置
+                    mapQuery.putIfAbsent(entry.getKey().toLowerCase().replace("-", "_"), entry.getValue());
                 }
             }
-
             String questString = StringUtils.mapToQuerySearch(mapQuery);
             builder.url(questString.isEmpty() ? url : (url.contains("?") ? url + "&" + questString : url + "?" + questString));
         }
@@ -511,9 +530,16 @@ public class HttpUtils {
          * @return 请求头
          */
         protected Headers headerBuild() {
-            setHeader("Accept-Charset", "UTF-8");
-            setHeader("Connection", keepAlive ? "keep-alive" : "close");
-            setHeader("Accept-Encoding", acceptEncodingGzip ? "gzip" : "");
+            if (chainTransferWithHeader) {
+                for (Map.Entry<String, String> entry : ChainProvider.get(ChainProvider.ChainType.CAN_CROSS_PROCESS).entrySet()) {
+                    // 头已经目标key存在，说明手动设置过了，优先级更高。
+                    String value = headers.get(entry.getKey());
+                    // 只有头中不存在时，才设置
+                    if (value == null) {
+                        setHeader(entry.getKey(), entry.getValue());
+                    }
+                }
+            }
             return headers.build();
         }
 
@@ -553,15 +579,17 @@ public class HttpUtils {
         protected void async(Request request, int retryTime, int retryMaxTime, CallbackInterface callbackInterface) {
 
             int nextRetryTime = retryTime + 1;
+
+            Map<String, Object> mdcInfo = new HashMap<>(16);
             // 获取MDC中的信息
-            Map<String, Object> mdcInfo = LogProvider.pull();
+            ChainProvider.initDataMap(mdcInfo);
 
             httpClient.newCall(request).enqueue(new Callback() {
 
                 @Override
                 public void onFailure(@NotNull Call call, @NotNull IOException e) {
-                    // 补偿
-                    LogProvider.compensationSomething(mdcInfo);
+                    // 将指定map中的所有有效"键"与"值"，赋值到MDC
+                    ChainProvider.initMDC(mdcInfo);
 
                     if (nextRetryTime <= retryMaxTime) {
 
@@ -578,16 +606,17 @@ public class HttpUtils {
                             new BusinessException(StatusCode.HTTP_REQUEST_API_ERROR, map -> map.put("request", request.toString()), e));
                     }
                     // 清除
-                    LogProvider.clear();
+                    ChainProvider.clear();
                 }
 
                 @Override
                 public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
-                    // 补偿
-                    LogProvider.compensationSomething(mdcInfo);
+                    // 将指定map中的所有有效"键"与"值"，赋值到MDC
+                    ChainProvider.initMDC(mdcInfo);
+
                     callbackInterface.call(analysisResponse(request, response), null);
                     // 清除
-                    LogProvider.clear();
+                    ChainProvider.clear();
                 }
             });
         }
@@ -601,13 +630,8 @@ public class HttpUtils {
          */
         protected HttpResult analysisResponse(Request request, Response response) throws IOException {
             Headers responseHeaders = response.headers();
-            // 响应对象
-            HttpResult httpResult = new HttpResult();
-            // 设置响应头
-            httpResult.setHeaders(responseHeaders);
-            // 设置响应总对象
-            httpResult.setResponse(response);
 
+            // 响应体字符串
             String responseBodyString = FinalVariable.NULL;
             try (ResponseBody body = response.body()) {
                 if (body != null) {
@@ -617,9 +641,7 @@ public class HttpUtils {
                 // 响应日志记录
                 logProvider.printHttpConsumerReceivedResponseLog(request, response, responseBodyString);
             }
-            // 设置响应体
-            httpResult.setBodyString(responseBodyString);
-            return httpResult;
+            return new HttpResult(response, responseHeaders, responseBodyString);
         }
 
         /**
@@ -739,34 +761,28 @@ public class HttpUtils {
 
         private static final long serialVersionUID = 1L;
 
-        private Response response;
+        private final Response response;
 
-        private Headers headers;
+        private final Headers headers;
 
-        private String bodyString;
+        private final String bodyString;
+
+        public HttpResult(Response response, Headers headers, String bodyString) {
+            this.response = response;
+            this.headers = headers;
+            this.bodyString = bodyString;
+        }
 
         public Response getResponse() {
             return response;
-        }
-
-        public void setResponse(Response response) {
-            this.response = response;
         }
 
         public Headers getHeaders() {
             return headers;
         }
 
-        public void setHeaders(Headers headers) {
-            this.headers = headers;
-        }
-
         public String getBodyString() {
             return bodyString;
-        }
-
-        public void setBodyString(String bodyString) {
-            this.bodyString = bodyString;
         }
 
         @Override

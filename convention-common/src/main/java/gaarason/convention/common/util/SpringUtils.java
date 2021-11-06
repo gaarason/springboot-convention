@@ -1,11 +1,11 @@
 package gaarason.convention.common.util;
 
 import gaarason.convention.common.autoconfigure.ConventionProperties;
-import gaarason.convention.common.models.annotation.web.ExcludeUnifiedRequest;
-import gaarason.convention.common.models.annotation.web.ExcludeUnifiedResponse;
-import gaarason.convention.common.models.annotation.web.UnifiedRequest;
-import gaarason.convention.common.models.annotation.web.UnifiedResponse;
-import gaarason.convention.common.models.exception.InternalException;
+import gaarason.convention.common.model.annotation.web.ExcludeUnifiedRequest;
+import gaarason.convention.common.model.annotation.web.ExcludeUnifiedResponse;
+import gaarason.convention.common.model.annotation.web.UnifiedRequest;
+import gaarason.convention.common.model.annotation.web.UnifiedResponse;
+import gaarason.convention.common.model.exception.BusinessException;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.MethodParameter;
@@ -146,7 +146,7 @@ public final class SpringUtils {
             }
             return Arrays.asList(strings.clone());
         } catch (Throwable e) {
-            throw new InternalException("获取启动类上的包扫描路径失败", e);
+            throw new BusinessException("获取启动类上的包扫描路径失败", e);
         }
     }
 

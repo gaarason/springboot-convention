@@ -9,7 +9,7 @@ import java.util.Map;
 /**
  * @author xt
  */
-@ConfigurationProperties(prefix = "ykj")
+@ConfigurationProperties(prefix = "convention")
 public class ConventionProperties implements Serializable {
 
     private static final long serialVersionUID = 1L;

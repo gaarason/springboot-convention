@@ -1,8 +1,7 @@
 package gaarason.convention.common.util;
 
-import gaarason.convention.common.models.exception.BusinessException;
-import gaarason.convention.common.models.exception.InternalException;
-import gaarason.convention.common.models.exception.StatusCode;
+import gaarason.convention.common.model.exception.BusinessException;
+import gaarason.convention.common.model.exception.StatusCode;
 import org.springframework.lang.Nullable;
 
 import java.io.BufferedReader;
@@ -20,7 +19,6 @@ import java.util.regex.Pattern;
 
 /**
  * 字符串 工具
- *
  * @author xt
  */
 public class StringUtils {
@@ -29,10 +27,10 @@ public class StringUtils {
      * java 关键字
      */
     private static final String[] JAVA_KEYWORDS = {"abstract", "case", "continue", "enum", "for", "instanceof", "new", "return", "switch", "transient",
-            "assert", "catch", "default", "extends", "goto", "int", "package", "short", "synchronized", "try", "boolean", "char", "do", "final", "if", "interface",
-            "private", "static", "this", "void", "break", "class", "double", "finally", "implements", "long", "protected", "strictfp", "throw", "volatile", "byte",
-            "const", "else", "float", "import", "native", "public", "super", "throws", "while", "byValue", "cast", "false", "future", "generic", "inner", "null",
-            "operator", "outer", "rest", "true", "var"};
+        "assert", "catch", "default", "extends", "goto", "int", "package", "short", "synchronized", "try", "boolean", "char", "do", "final", "if", "interface",
+        "private", "static", "this", "void", "break", "class", "double", "finally", "implements", "long", "protected", "strictfp", "throw", "volatile", "byte",
+        "const", "else", "float", "import", "native", "public", "super", "throws", "while", "byValue", "cast", "false", "future", "generic", "inner", "null",
+        "operator", "outer", "rest", "true", "var"};
 
     private static final Pattern LINE_PATTERN = Pattern.compile("_(\\w)");
 
@@ -40,7 +38,6 @@ public class StringUtils {
 
     /**
      * 格式化参数到 query 形式
-     *
      * @param paramsMap 参数map
      * @return 字符串 eg: name=zhang&age=1
      * @throws BusinessException HTTP参数构造异常
@@ -51,7 +48,6 @@ public class StringUtils {
 
     /**
      * 格式化参数到 query 形式( 经过 url encode)
-     *
      * @param paramsMap 参数map
      * @param sort      是否key排序
      * @return 字符串 eg: name=zhang&age=1
@@ -75,7 +71,6 @@ public class StringUtils {
 
     /**
      * 递归解析map到query
-     *
      * @param object    对象
      * @param parentStr 里层分隔符
      * @param first     是否最外层
@@ -116,7 +111,6 @@ public class StringUtils {
 
     /**
      * 将首字符转化为小写
-     *
      * @param str 原字符串
      * @return 字符串
      */
@@ -132,7 +126,6 @@ public class StringUtils {
 
     /**
      * 下划线转驼峰
-     *
      * @param str              原字符串
      * @param firstIsUpperCase 大驼峰 默认false
      * @return 处理后的字符
@@ -153,7 +146,6 @@ public class StringUtils {
 
     /**
      * 小驼峰转下划线
-     *
      * @param str 原字符串
      * @return 处理后的字符
      */
@@ -163,7 +155,6 @@ public class StringUtils {
 
     /**
      * 小驼峰转下划线
-     *
      * @param str    原字符串
      * @param symbol 符号
      * @return 处理后的字符
@@ -180,7 +171,6 @@ public class StringUtils {
 
     /**
      * 移除字符串左侧的所有character
-     *
      * @param str       原字符串
      * @param character 将要移除的字符
      * @return 处理后的字符
@@ -195,7 +185,6 @@ public class StringUtils {
 
     /**
      * 移除字符串右侧的所有character
-     *
      * @param str       原字符串
      * @param character 将要移除的字符
      * @return 处理后的字符
@@ -210,7 +199,6 @@ public class StringUtils {
 
     /**
      * 是否是合法的标识符
-     *
      * @param input 输入字符串
      * @return 是否
      */
@@ -231,7 +219,6 @@ public class StringUtils {
 
     /**
      * 是否为java关键字
-     *
      * @param input 输入字符串
      * @return 是否
      */
@@ -242,7 +229,6 @@ public class StringUtils {
 
     /**
      * md5
-     *
      * @param input 输入
      * @return 输出
      */
@@ -272,7 +258,6 @@ public class StringUtils {
 
     /**
      * 通过BufferedReader和字符编码集转换成byte数组
-     *
      * @param br                 BufferedReader
      * @param originallyEncoding 原输入字符集
      * @return byte数组
@@ -289,13 +274,12 @@ public class StringUtils {
             }
             return new byte[0];
         } catch (Throwable e) {
-            throw new InternalException(e);
+            throw new BusinessException(e);
         }
     }
 
     /**
      * InputStream 2 ByteArrayOutputStream
-     *
      * @param is InputStream
      * @return ByteArrayOutputStream
      */
@@ -308,7 +292,31 @@ public class StringUtils {
             }
             return byteArrayOutputStream;
         } catch (Throwable e) {
-            throw new InternalException(e);
+            throw new BusinessException(e);
         }
+    }
+
+    /**
+     * 是否为空字符
+     * @param str 字符串
+     * @return bool
+     */
+    public static boolean hasText(@Nullable String str) {
+        return (str != null && !str.isEmpty() && containsText(str));
+    }
+
+    /**
+     * 是否为空字符
+     * @param str 字符串
+     * @return bool
+     */
+    private static boolean containsText(CharSequence str) {
+        int strLen = str.length();
+        for (int i = 0; i < strLen; i++) {
+            if (!Character.isWhitespace(str.charAt(i))) {
+                return true;
+            }
+        }
+        return false;
     }
 }

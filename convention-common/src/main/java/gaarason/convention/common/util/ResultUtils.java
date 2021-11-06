@@ -2,12 +2,13 @@ package gaarason.convention.common.util;
 
 import gaarason.convention.common.appointment.CommonVariable;
 import gaarason.convention.common.appointment.FinalVariable;
-import gaarason.convention.common.models.exception.BusinessException;
-import gaarason.convention.common.models.exception.StatusCode;
-import gaarason.convention.common.models.pojo.ResultVO;
-import org.slf4j.MDC;
+import gaarason.convention.common.model.exception.BusinessException;
+import gaarason.convention.common.model.exception.StatusCode;
+import gaarason.convention.common.model.pojo.ResultVO;
+import gaarason.convention.common.provider.ChainProvider;
 import org.springframework.lang.Nullable;
 
+import java.io.Serializable;
 import java.util.Arrays;
 
 /**
@@ -25,9 +26,9 @@ public final class ResultUtils {
      * @return 响应对象
      */
     public static ResultVO<Object> wrap(ResultVO<Object> originalResult) {
-        originalResult.setTraceId(MDC.get(FinalVariable.LogEnum.TRACE_ID.name()));
-        originalResult.setRequestUrl(MDC.get(FinalVariable.LogEnum.REQUEST_URL.name()));
-        originalResult.setRequestDatetime(MDC.get(FinalVariable.LogEnum.REQUEST_DATETIME.name()));
+        originalResult.setTraceId(ChainProvider.get(ChainProvider.CanCrossProcessKey.TRACE_ID, FinalVariable.EMPTY_STRING));
+        originalResult.setRequestUrl(ChainProvider.get(ChainProvider.CanNotCrossProcessKey.REQUEST_URL, FinalVariable.EMPTY_STRING));
+        originalResult.setRequestDatetime(ChainProvider.get(ChainProvider.CanNotCrossProcessKey.REQUEST_DATETIME, FinalVariable.EMPTY_STRING));
         originalResult.setResponseDatetime(FinalVariable.NOW_DATETIME.get());
         originalResult.setApplicationName(CommonVariable.APPLICATION_NAME);
         return originalResult;
@@ -166,7 +167,7 @@ public final class ResultUtils {
      * @param e 异常
      * @return 响应
      */
-    public static ResultVO<Object> error(Throwable e) {
+    public static ResultVO<?> error(Throwable e) {
         return ResultUtils.error(new ResultVO<>(), e);
     }
 
@@ -196,7 +197,7 @@ public final class ResultUtils {
             stringBuilder.append(e.getClass().toString().replace("class ", "")).append(" : ").append(e.getMessage()).append(", ");
             stringBuilder.append(
                 Arrays.stream(stackTraceArr).map(
-                    s -> s.getClassName() + "." + s.getMethodName() + "(" + s.getFileName() + ":" + s.getLineNumber() + ")")
+                        s -> s.getClassName() + "." + s.getMethodName() + "(" + s.getFileName() + ":" + s.getLineNumber() + ")")
                     .reduce((one, two) -> one + ", " + two).orElse(null));
             Throwable cause = e.getCause();
             if (cause != null) {
@@ -211,7 +212,7 @@ public final class ResultUtils {
      * @param resultVO 响应对象
      * @return 异常
      */
-    public static BusinessException toException(ResultVO<?> resultVO) {
+    public static BusinessException toException(ResultVO<? extends Serializable> resultVO) {
         throw new BusinessException(resultVO.getCode(), resultVO.getMessage());
     }
 

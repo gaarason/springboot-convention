@@ -9,7 +9,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.lang.NonNull;
 
 /**
  * 自动配置
@@ -17,10 +16,10 @@ import org.springframework.lang.NonNull;
  */
 @Configuration
 @EnableConfigurationProperties({ConventionProperties.class})
-public class BootConfiguration implements ApplicationContextAware {
+public class CommonAutoConfiguration implements ApplicationContextAware {
 
     @Override
-    public void setApplicationContext(@NonNull ApplicationContext applicationContext) throws BeansException {
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         // 设置 spring 上下文
         SpringUtils.setApplicationContext(applicationContext);
     }

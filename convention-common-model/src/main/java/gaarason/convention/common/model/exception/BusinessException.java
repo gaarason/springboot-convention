@@ -38,6 +38,14 @@ public class BusinessException extends RuntimeException {
         makeDebug.run(debug);
     }
 
+    public BusinessException(int code, String message) {
+        this(code, message, null, map -> {});
+    }
+
+    public BusinessException(int code, String message, Throwable e) {
+        this(code, message, null, map -> {}, e);
+    }
+
     public BusinessException(StatusCode statusCode, Serializable error, DebugFunctionalInterface makeDebug) {
         this(statusCode.getCode(), statusCode.getMessage(), error, makeDebug);
     }
@@ -99,6 +107,16 @@ public class BusinessException extends RuntimeException {
 
     public BusinessException(StatusCode statusCode, String message, Throwable e) {
         this(statusCode.getCode(), message, null, map -> {
+        }, e);
+    }
+
+    public BusinessException() {
+        this(StatusCode.INTERNAL_ERROR.getCode(), null, null, map -> {
+        });
+    }
+
+    public BusinessException(Throwable e) {
+        this(StatusCode.INTERNAL_ERROR.getCode(), null, null, map -> {
         }, e);
     }
 

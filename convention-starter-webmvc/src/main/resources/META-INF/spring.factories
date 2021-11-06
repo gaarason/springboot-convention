@@ -1,0 +1,2 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+gaarason.convention.starter.webmvc.autoconfigure.WebMvcAutoConfiguration

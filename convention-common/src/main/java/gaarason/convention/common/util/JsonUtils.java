@@ -1,7 +1,5 @@
 package gaarason.convention.common.util;
 
-import gaarason.convention.common.appointment.FinalVariable;
-import gaarason.convention.common.model.exception.BusinessException;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
@@ -15,6 +13,8 @@ import com.fasterxml.jackson.datatype.jsr310.deser.LocalTimeDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
+import gaarason.convention.common.appointment.FinalVariable;
+import gaarason.convention.common.model.exception.BusinessException;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -39,7 +39,6 @@ public class JsonUtils {
     /**
      * 获取json对象, 每次均会返回相同配置的全新引用对象(防止同地址对象属性被修改的情况)
      * 应避免重复调用
-     *
      * @return ObjectMapper
      */
     public static ObjectMapper getMapper() {
@@ -48,20 +47,25 @@ public class JsonUtils {
 
     /**
      * 初始化
-     *
      * @return ObjectMapper
      */
     private static ObjectMapper intMapper() {
         ObjectMapper mapper = new ObjectMapper().configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true)
-                .setSerializationInclusion(JsonInclude.Include.ALWAYS).enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY);
+            .setSerializationInclusion(JsonInclude.Include.ALWAYS).enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY);
 
         JavaTimeModule javaTimeModule = new JavaTimeModule();
-        javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ofPattern(FinalVariable.Timestamp.DEFAULT_DATE_TIME_FORMAT)));
-        javaTimeModule.addSerializer(LocalDate.class, new LocalDateSerializer(DateTimeFormatter.ofPattern(FinalVariable.Timestamp.DEFAULT_DATE_FORMAT)));
-        javaTimeModule.addSerializer(LocalTime.class, new LocalTimeSerializer(DateTimeFormatter.ofPattern(FinalVariable.Timestamp.DEFAULT_TIME_FORMAT)));
-        javaTimeModule.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer(DateTimeFormatter.ofPattern(FinalVariable.Timestamp.DEFAULT_DATE_TIME_FORMAT)));
-        javaTimeModule.addDeserializer(LocalDate.class, new LocalDateDeserializer(DateTimeFormatter.ofPattern(FinalVariable.Timestamp.DEFAULT_DATE_FORMAT)));
-        javaTimeModule.addDeserializer(LocalTime.class, new LocalTimeDeserializer(DateTimeFormatter.ofPattern(FinalVariable.Timestamp.DEFAULT_TIME_FORMAT)));
+        javaTimeModule.addSerializer(LocalDateTime.class,
+            new LocalDateTimeSerializer(DateTimeFormatter.ofPattern(FinalVariable.Timestamp.DEFAULT_DATE_TIME_FORMAT)));
+        javaTimeModule.addSerializer(LocalDate.class,
+            new LocalDateSerializer(DateTimeFormatter.ofPattern(FinalVariable.Timestamp.DEFAULT_DATE_FORMAT)));
+        javaTimeModule.addSerializer(LocalTime.class,
+            new LocalTimeSerializer(DateTimeFormatter.ofPattern(FinalVariable.Timestamp.DEFAULT_TIME_FORMAT)));
+        javaTimeModule.addDeserializer(LocalDateTime.class,
+            new LocalDateTimeDeserializer(DateTimeFormatter.ofPattern(FinalVariable.Timestamp.DEFAULT_DATE_TIME_FORMAT)));
+        javaTimeModule.addDeserializer(LocalDate.class,
+            new LocalDateDeserializer(DateTimeFormatter.ofPattern(FinalVariable.Timestamp.DEFAULT_DATE_FORMAT)));
+        javaTimeModule.addDeserializer(LocalTime.class,
+            new LocalTimeDeserializer(DateTimeFormatter.ofPattern(FinalVariable.Timestamp.DEFAULT_TIME_FORMAT)));
 
         // Date序列化和反序列化
         javaTimeModule.addSerializer(Date.class, new JsonSerializer<Date>() {
@@ -74,7 +78,8 @@ public class JsonUtils {
         });
         javaTimeModule.addDeserializer(Date.class, new JsonDeserializer<Date>() {
             @Override
-            public Date deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException, JsonProcessingException {
+            public Date deserialize(JsonParser jsonParser,
+                DeserializationContext deserializationContext) throws IOException, JsonProcessingException {
                 SimpleDateFormat format = new SimpleDateFormat(FinalVariable.Timestamp.DEFAULT_DATE_TIME_FORMAT);
                 String date = jsonParser.getText();
                 try {
@@ -91,7 +96,6 @@ public class JsonUtils {
 
     /**
      * 内部专用, 获取json对象
-     *
      * @return ObjectMapper
      */
     static ObjectMapper getTheMapper() {
@@ -100,7 +104,6 @@ public class JsonUtils {
 
     /**
      * 对象 转 json字符串
-     *
      * @param obj 对象
      * @return json 字符串
      * @throws BusinessException 序列化异常
@@ -118,7 +121,6 @@ public class JsonUtils {
 
     /**
      * json字符串 转 对象
-     *
      * @param json         json 字符串
      * @param valueTypeRef 对象类型 eg: new TypeReference<ResultVO<List<List<String>>>>() {}
      * @param <T>          对象类型
@@ -138,7 +140,6 @@ public class JsonUtils {
 
     /**
      * json字符串 转 对象
-     *
      * @param json         json 字符串
      * @param valueTypeRef 对象类型
      * @param <T>          对象类型
@@ -158,7 +159,6 @@ public class JsonUtils {
 
     /**
      * json字符串 转 对象
-     *
      * @param json json 字符串
      * @param type 对象类型
      * @param <T>  对象类型

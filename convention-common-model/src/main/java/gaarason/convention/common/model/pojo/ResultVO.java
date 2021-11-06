@@ -16,7 +16,7 @@ import java.io.Serializable;
  */
 @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ResultVO<T extends Serializable> implements Serializable {
+public class ResultVO<T> implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
@@ -66,6 +66,9 @@ public class ResultVO<T extends Serializable> implements Serializable {
      */
     protected String applicationName;
 
+    /**
+     * 异常
+     */
     @JsonIgnore
     @Nullable
     protected Throwable exception;
