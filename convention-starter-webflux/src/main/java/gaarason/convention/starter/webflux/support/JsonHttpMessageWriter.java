@@ -2,16 +2,20 @@ package gaarason.convention.starter.webflux.support;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gaarason.convention.common.appointment.FinalVariable;
+import gaarason.convention.common.provider.LogProvider;
 import gaarason.convention.common.util.JsonUtils;
 import org.reactivestreams.Publisher;
 import org.springframework.core.ResolvableType;
+import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.MediaType;
 import org.springframework.http.ReactiveHttpOutputMessage;
 import org.springframework.http.codec.HttpMessageWriter;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;

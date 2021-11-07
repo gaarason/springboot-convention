@@ -16,6 +16,20 @@
 
 package reactor.netty.http.server;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
+import java.util.function.Consumer;
+import java.util.function.Function;
+
 import gaarason.convention.common.appointment.FinalVariable;
 import gaarason.convention.common.model.exception.BusinessException;
 import gaarason.convention.common.model.exception.StatusCode;
@@ -31,7 +45,22 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMessage;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpUtil;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
@@ -46,7 +75,12 @@ import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.netty.*;
+import reactor.netty.Connection;
+import reactor.netty.ConnectionObserver;
+import reactor.netty.FutureMono;
+import reactor.netty.NettyOutbound;
+import reactor.netty.NettyPipeline;
+import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.Cookies;
 import reactor.netty.http.HttpOperations;
@@ -57,33 +91,22 @@ import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.*;
-import java.util.function.BiFunction;
-import java.util.function.BiPredicate;
-import java.util.function.Consumer;
-import java.util.function.Function;
-
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.http.server.HttpServerState.REQUEST_DECODING_FAILED;
 
-
 /**
+ * io.projectreactor.netty:reactor-netty-http:1.0.7 -> reactor.netty.http.server.HttpServerOperations.class
  * Conversion between Netty types  and Reactor types ({@link HttpOperations}.
- * <p>
  *
  * @author Stephane Maldini1
  */
 class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerResponse>
-        implements HttpServerRequest, HttpServerResponse {
+    implements HttpServerRequest, HttpServerResponse {
 
     final HttpResponse nettyResponse;
-    final HttpHeaders responseHeaders;
-    final Cookies cookieHolder;
+    final HttpHeaders  responseHeaders;
+    final Cookies     cookieHolder;
     final HttpRequest nettyRequest;
     final String path;
     final ConnectionInfo connectionInfo;
@@ -114,32 +137,33 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
     }
 
     HttpServerOperations(Connection c,
-                         ConnectionObserver listener,
-                         @Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
-                         HttpRequest nettyRequest,
-                         @Nullable ConnectionInfo connectionInfo,
-                         ServerCookieEncoder encoder,
-                         ServerCookieDecoder decoder,
-                         @Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
-                         boolean secured) {
+        ConnectionObserver listener,
+        @Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
+        HttpRequest nettyRequest,
+        @Nullable ConnectionInfo connectionInfo,
+        ServerCookieEncoder encoder,
+        ServerCookieDecoder decoder,
+        @Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+        boolean secured) {
         this(c, listener, compressionPredicate, nettyRequest, connectionInfo, encoder, decoder, mapHandle, secured, true);
     }
 
     HttpServerOperations(Connection c,
-                         ConnectionObserver listener,
-                         @Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
-                         HttpRequest nettyRequest,
-                         @Nullable ConnectionInfo connectionInfo,
-                         ServerCookieEncoder encoder,
-                         ServerCookieDecoder decoder,
-                         @Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
-                         boolean secured,
-                         boolean resolvePath) {
+        ConnectionObserver listener,
+        @Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
+        HttpRequest nettyRequest,
+        @Nullable ConnectionInfo connectionInfo,
+        ServerCookieEncoder encoder,
+        ServerCookieDecoder decoder,
+        @Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+        boolean secured,
+        boolean resolvePath) {
         super(c, listener);
         this.nettyRequest = nettyRequest;
         if (resolvePath) {
             this.path = resolvePath(nettyRequest.uri());
-        } else {
+        }
+        else {
             this.path = null;
         }
         this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
@@ -173,7 +197,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
     @Override
     protected HttpMessage newFullBodyMessage(ByteBuf body) {
         HttpResponse res =
-                new DefaultFullHttpResponse(version(), status(), body);
+            new DefaultFullHttpResponse(version(), status(), body);
 
         if (!HttpMethod.HEAD.equals(method())) {
             responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
@@ -204,8 +228,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
     public HttpServerResponse addCookie(Cookie cookie) {
         if (!hasSentHeaders()) {
             this.responseHeaders.add(HttpHeaderNames.SET_COOKIE,
-                    cookieEncoder.encode(cookie));
-        } else {
+                cookieEncoder.encode(cookie));
+        }
+        else {
             throw new IllegalStateException("Status and headers already sent");
         }
         return this;
@@ -215,7 +240,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
     public HttpServerResponse addHeader(CharSequence name, CharSequence value) {
         if (!hasSentHeaders()) {
             this.responseHeaders.add(name, value);
-        } else {
+        }
+        else {
             throw new IllegalStateException("Status and headers already sent");
         }
         return this;
@@ -242,7 +268,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
     public HttpServerResponse header(CharSequence name, CharSequence value) {
         if (!hasSentHeaders()) {
             this.responseHeaders.set(name, value);
-        } else {
+        }
+        else {
             throw new IllegalStateException("Status and headers already sent");
         }
         return this;
@@ -252,7 +279,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
     public HttpServerResponse headers(HttpHeaders headers) {
         if (!hasSentHeaders()) {
             this.responseHeaders.set(headers);
-        } else {
+        }
+        else {
             throw new IllegalStateException("Status and headers already sent");
         }
         return this;
@@ -315,14 +343,15 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
         //       If decoding a response, just throw an error.
         if (HttpUtil.is100ContinueExpected(nettyRequest)) {
             return FutureMono.deferFuture(() -> {
-                if (!hasSentHeaders()) {
-                    return channel().writeAndFlush(CONTINUE);
-                }
-                return channel().newSucceededFuture();
-            })
+                    if (!hasSentHeaders()) {
+                        return channel().writeAndFlush(CONTINUE);
+                    }
+                    return channel().newSucceededFuture();
+                })
 
-                    .thenMany(super.receiveObject());
-        } else {
+                .thenMany(super.receiveObject());
+        }
+        else {
             return super.receiveObject();
         }
     }
@@ -332,7 +361,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
     public InetSocketAddress hostAddress() {
         if (connectionInfo != null) {
             return this.connectionInfo.getHostAddress();
-        } else {
+        }
+        else {
             return null;
         }
     }
@@ -342,7 +372,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
     public InetSocketAddress remoteAddress() {
         if (connectionInfo != null) {
             return this.connectionInfo.getRemoteAddress();
-        } else {
+        }
+        else {
             return null;
         }
     }
@@ -359,7 +390,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
     public String scheme() {
         if (connectionInfo != null) {
             return this.connectionInfo.getScheme();
-        } else {
+        }
+        else {
             return scheme;
         }
     }
@@ -374,7 +406,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
         if (markSentHeaderAndBody()) {
             HttpMessage response = newFullBodyMessage(EMPTY_BUFFER);
             return FutureMono.deferFuture(() -> channel().writeAndFlush(response));
-        } else {
+        }
+        else {
             return Mono.empty();
         }
     }
@@ -383,7 +416,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
     public NettyOutbound sendFile(Path file) {
         try {
             return sendFile(file, 0L, Files.size(file));
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             if (log.isDebugEnabled()) {
                 log.debug(format(channel(), "Path not resolved"), e);
             }
@@ -394,15 +428,15 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
     @Override
     public Mono<Void> sendNotFound() {
         return this.status(HttpResponseStatus.NOT_FOUND)
-                .send();
+            .send();
     }
 
     @Override
     public Mono<Void> sendRedirect(String location) {
         Objects.requireNonNull(location, "location");
         return this.status(HttpResponseStatus.FOUND)
-                .header(HttpHeaderNames.LOCATION, location)
-                .send();
+            .header(HttpHeaderNames.LOCATION, location)
+            .send();
     }
 
     /**
@@ -423,7 +457,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
     public HttpServerResponse status(HttpResponseStatus status) {
         if (!hasSentHeaders()) {
             this.nettyResponse.setStatus(status);
-        } else {
+        }
+        else {
             throw new IllegalStateException("Status and headers already sent");
         }
         return this;
@@ -431,8 +466,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
     @Override
     public Mono<Void> sendWebsocket(
-            BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler,
-            WebsocketServerSpec configurer) {
+        BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler,
+        WebsocketServerSpec configurer) {
         return withWebsocketSupport(uri(), configurer, websocketHandler);
     }
 
@@ -464,25 +499,30 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
     public HttpServerResponse compression(boolean compress) {
         if (!compress) {
             removeHandler(NettyPipeline.CompressionHandler);
-        } else if (channel().pipeline()
-                .get(NettyPipeline.CompressionHandler) == null) {
+        }
+        else if (channel().pipeline()
+            .get(NettyPipeline.CompressionHandler) == null) {
             SimpleCompressionHandler handler = new SimpleCompressionHandler();
             try {
                 List<Object> out = new ArrayList<>();
                 try {
                     //Do not invoke handler.channelRead as it will trigger ctx.fireChannelRead
                     handler.decode(channel().pipeline().context(NettyPipeline.ReactiveBridge), nettyRequest, out);
-                } catch (DecoderException e) {
+                }
+                catch (DecoderException e) {
                     throw e;
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
                     throw new DecoderException(e);
-                } finally {
+                }
+                finally {
                     ReferenceCountUtil.release(nettyRequest);
                     out.clear();
                 }
 
                 addHandlerFirst(NettyPipeline.CompressionHandler, handler);
-            } catch (Throwable e) {
+            }
+            catch (Throwable e) {
                 log.error(format(channel(), ""), e);
             }
         }
@@ -494,7 +534,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
         if (msg instanceof HttpRequest) {
             try {
                 listener().onStateChange(this, HttpServerState.REQUEST_RECEIVED);
-            } catch (Exception e) {
+            }
+            catch (Exception e) {
                 onInboundError(e);
                 ReferenceCountUtil.release(msg);
                 return;
@@ -503,7 +544,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
                 FullHttpRequest request = (FullHttpRequest) msg;
                 if (request.content().readableBytes() > 0) {
                     super.onInboundNext(ctx, msg);
-                } else {
+                }
+                else {
                     request.release();
                 }
                 if (isHttp2()) {
@@ -523,16 +565,26 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
                 channel().config().setAutoRead(true);
                 onInboundComplete();
             }
-        } else {
+        }
+        else {
             super.onInboundNext(ctx, msg);
         }
+    }
+
+    @Override
+    protected void onInboundClose() {
+        discardWhenNoReceiver();
+        if (!(isInboundCancelled() || isInboundDisposed())) {
+            onInboundError(new AbortedException("Connection has been closed"));
+        }
+        terminate();
     }
 
     @Override
     protected void afterMarkSentHeaders() {
         if (HttpResponseStatus.NOT_MODIFIED.equals(status())) {
             responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
-                    .remove(HttpHeaderNames.CONTENT_LENGTH);
+                .remove(HttpHeaderNames.CONTENT_LENGTH);
         }
         if (compressionPredicate != null && compressionPredicate.test(this, this)) {
             compression(true);
@@ -562,13 +614,15 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
         if (markSentHeaderAndBody()) {
             if (log.isDebugEnabled()) {
                 log.debug(format(channel(), "No sendHeaders() called before complete, sending " +
-                        "zero-length header"));
+                    "zero-length header"));
             }
 
             f = channel().writeAndFlush(newFullBodyMessage(EMPTY_BUFFER));
-        } else if (markSentBody()) {
+        }
+        else if (markSentBody()) {
             f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
-        } else {
+        }
+        else {
             discard();
             return;
         }
@@ -593,8 +647,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
         //Try to defer the disposing to leave a chance for any synchronous complete following this callback
         if (!ops.isSubscriptionDisposed()) {
             ch.eventLoop()
-                    .execute(((HttpServerOperations) ops)::terminate);
-        } else {
+                .execute(((HttpServerOperations) ops)::terminate);
+        }
+        else {
             //if already disposed, we can immediately call terminate
             ((HttpServerOperations) ops).terminate();
         }
@@ -688,14 +743,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
             nettyResponse.setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR);
             responseHeaders.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
             channel().writeAndFlush(newFullBodyMessage(EMPTY_BUFFER))
-                    .addListener(ChannelFutureListener.CLOSE);
+                .addListener(ChannelFutureListener.CLOSE);
             return;
         }
 
         markSentBody();
         log.error(format(channel(), "Error finishing response. Closing connection"), err);
         channel().writeAndFlush(EMPTY_BUFFER)
-                .addListener(ChannelFutureListener.CLOSE);
+            .addListener(ChannelFutureListener.CLOSE);
     }
 
     @Override
@@ -704,21 +759,22 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
     }
 
     final Mono<Void> withWebsocketSupport(String url,
-                                          WebsocketServerSpec websocketServerSpec,
-                                          BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
+        WebsocketServerSpec websocketServerSpec,
+        BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
         Objects.requireNonNull(websocketServerSpec, "websocketServerSpec");
         Objects.requireNonNull(websocketHandler, "websocketHandler");
         if (markSentHeaders()) {
             WebsocketServerOperations ops = new WebsocketServerOperations(url, websocketServerSpec, this);
 
             return FutureMono.from(ops.handshakerResult)
-                    .doOnEach(signal -> {
-                        if (!signal.hasError() && (websocketServerSpec.protocols() == null || ops.selectedSubprotocol() != null)) {
-                            websocketHandler.apply(ops, ops)
-                                    .subscribe(new WebsocketSubscriber(ops, Context.of(signal.getContextView())));
-                        }
-                    });
-        } else {
+                .doOnEach(signal -> {
+                    if (!signal.hasError() && (websocketServerSpec.protocols() == null || ops.selectedSubprotocol() != null)) {
+                        websocketHandler.apply(ops, ops)
+                            .subscribe(new WebsocketSubscriber(ops, Context.of(signal.getContextView())));
+                    }
+                });
+        }
+        else {
             log.error(format(channel(), "Cannot enable websocket if headers have already been sent"));
         }
         return Mono.error(new IllegalStateException("Failed to upgrade to websocket"));
@@ -726,7 +782,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
     static final class WebsocketSubscriber implements CoreSubscriber<Void>, ChannelFutureListener {
         final WebsocketServerOperations ops;
-        final Context context;
+        final Context                context;
 
         WebsocketSubscriber(WebsocketServerOperations ops, Context context) {
             this.ops = ops;
@@ -749,14 +805,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
         }
 
         @Override
-        public void operationComplete(ChannelFuture future) {
+        public void operationComplete(ChannelFuture future)  {
             ops.terminate();
         }
 
         @Override
         public void onComplete() {
             if (ops.channel()
-                    .isActive()) {
+                .isActive()) {
                 ops.sendCloseNow(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE), this);
             }
         }
@@ -768,23 +824,23 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
     }
 
     static final Logger log = Loggers.getLogger(HttpServerOperations.class);
-    final static AsciiString EVENT_STREAM = new AsciiString("text/event-stream");
+    final static AsciiString      EVENT_STREAM = new AsciiString("text/event-stream");
 
-    final static FullHttpResponse CONTINUE =
-            new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-                    HttpResponseStatus.CONTINUE,
-                    EMPTY_BUFFER);
+    final static FullHttpResponse CONTINUE     =
+        new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+            HttpResponseStatus.CONTINUE,
+            EMPTY_BUFFER);
 
     static final class FailedHttpServerRequest extends HttpServerOperations {
 
         final HttpResponse customResponse;
 
         FailedHttpServerRequest(
-                Connection c,
-                ConnectionObserver listener,
-                @Nullable HttpRequest nettyRequest,
-                HttpResponse nettyResponse,
-                boolean secure) {
+            Connection c,
+            ConnectionObserver listener,
+            @Nullable HttpRequest nettyRequest,
+            HttpResponse nettyResponse,
+            boolean secure) {
             super(c, listener, null, nettyRequest, null, ServerCookieEncoder.STRICT, ServerCookieDecoder.STRICT, null, secure, false);
             this.customResponse = nettyResponse;
         }
