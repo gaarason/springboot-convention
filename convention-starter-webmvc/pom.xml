@@ -30,5 +30,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>com.github.gaarason</groupId>
+            <artifactId>convention-test-common-web</artifactId>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
+
 </project>

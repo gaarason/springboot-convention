@@ -49,19 +49,19 @@ public class LoggingEnvironmentPreparedListener implements ApplicationListener<A
 
         SpringUtils.turnSpringPropertyToSystem(environment, "spring.profiles.active", "default");
 
-        SpringUtils.turnSpringPropertyToSystem(environment, "ykj.log-spring.file-dir", logSpring.getFileDir());
+        SpringUtils.turnSpringPropertyToSystem(environment, "convention.log-spring.file-dir", logSpring.getFileDir());
 
-        SpringUtils.turnSpringPropertyToSystem(environment, "ykj.log-spring.console-pattern", logSpring.getConsolePattern());
+        SpringUtils.turnSpringPropertyToSystem(environment, "convention.log-spring.console-pattern", logSpring.getConsolePattern());
 
-        SpringUtils.turnSpringPropertyToSystem(environment, "ykj.log-spring.console-level", logSpring.getConsoleLevel());
+        SpringUtils.turnSpringPropertyToSystem(environment, "convention.log-spring.console-level", logSpring.getConsoleLevel());
 
-        SpringUtils.turnSpringPropertyToSystem(environment, "ykj.log-spring.json-pattern", logSpring.getJsonPattern());
+        SpringUtils.turnSpringPropertyToSystem(environment, "convention.log-spring.json-pattern", logSpring.getJsonPattern());
 
-        SpringUtils.turnSpringPropertyToSystem(environment, "ykj.log-spring.json-level", logSpring.getJsonLevel());
+        SpringUtils.turnSpringPropertyToSystem(environment, "convention.log-spring.json-level", logSpring.getJsonLevel());
 
-        SpringUtils.turnSpringPropertyToSystem(environment, "ykj.log-spring.skywalking-pattern", logSpring.getSkywalkingPattern());
+        SpringUtils.turnSpringPropertyToSystem(environment, "convention.log-spring.skywalking-pattern", logSpring.getSkywalkingPattern());
 
-        SpringUtils.turnSpringPropertyToSystem(environment, "ykj.log-spring.skywalking-level", logSpring.getSkywalkingLevel());
+        SpringUtils.turnSpringPropertyToSystem(environment, "convention.log-spring.skywalking-level", logSpring.getSkywalkingLevel());
     }
 
     @Override

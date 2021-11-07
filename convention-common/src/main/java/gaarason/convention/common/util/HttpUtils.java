@@ -129,7 +129,8 @@ public class HttpUtils {
             logProvider = LogProvider.getInstance();
 
             setHeader(HTTP_HEADER_ACCEPT_CHARSET, "UTF-8");
-            setHeader(HTTP_HEADER_CONNECTION, "keep-alive");
+//            setHeader(HTTP_HEADER_CONNECTION, "keep-alive");
+            setHeader(HTTP_HEADER_CONNECTION, "close");
             setHeader(HTTP_HEADER_ACCEPT_ENCODING, "");
         }
 

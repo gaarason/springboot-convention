@@ -6,18 +6,18 @@
     <Appenders>
         <!-- 控制台日志 -->
         <Console name="ConsoleLog" target="SYSTEM_OUT">
-            <PatternLayout pattern="${sys:ykj.log-spring.console-pattern}"/>
-            <ThresholdFilter level="${sys:ykj.log-spring.console-level}"/>
+            <PatternLayout pattern="${sys:convention.log-spring.console-pattern}"/>
+            <ThresholdFilter level="${sys:convention.log-spring.console-level}"/>
         </Console>
 
         <!-- json风格日志 异步时建议immediateFlush="false"关闭每次刷新 -->
         <RollingRandomAccessFile name="JsonFileLog"
-                                 fileName="${sys:ykj.log-spring.file-dir}/json/json.log"
-                                 filePattern="${sys:ykj.log-spring.file-dir}/json/json.%d{yyyy-MM-dd}.log"
+                                 fileName="${sys:convention.log-spring.file-dir}/json/json.log"
+                                 filePattern="${sys:convention.log-spring.file-dir}/json/json.%d{yyyy-MM-dd}.log"
                                  immediateFlush="true"
                                  append="true">
-            <PatternLayout pattern="${sys:ykj.log-spring.json-pattern}"/>
-            <ThresholdFilter level="${sys:ykj.log-spring.json-level}"/>
+            <PatternLayout pattern="${sys:convention.log-spring.json-pattern}"/>
+            <ThresholdFilter level="${sys:convention.log-spring.json-level}"/>
             <Policies>
                 <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
             </Policies>
@@ -25,8 +25,8 @@
 
         <!-- skyWalking日志 -->
         <GRPCLogClientAppender name="GrpcLog">
-            <PatternLayout pattern="${sys:ykj.log-spring.skywalking-pattern}"/>
-            <ThresholdFilter level="${sys:ykj.log-spring.skywalking-level}"/>
+            <PatternLayout pattern="${sys:convention.log-spring.skywalking-pattern}"/>
+            <ThresholdFilter level="${sys:convention.log-spring.skywalking-level}"/>
         </GRPCLogClientAppender>
     </Appenders>
 

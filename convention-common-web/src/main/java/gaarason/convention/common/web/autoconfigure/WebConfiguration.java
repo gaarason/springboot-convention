@@ -3,7 +3,6 @@ package gaarason.convention.common.web.autoconfigure;
 import gaarason.convention.common.web.contract.ChainContextHandlerContract;
 import gaarason.convention.common.web.contract.ExceptionHandlerContract;
 import gaarason.convention.common.web.contract.ResponseHandlerContract;
-import gaarason.convention.common.web.controller.BlankFaviconIcoController;
 import gaarason.convention.common.web.controller.impl.BlankFaviconIcoControllerImpl;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -47,11 +46,11 @@ public class WebConfiguration {
 
     /**
      * 路由 /favicon.ico
-     * 可以使用 ykj.http.generate-blank-favicon-ico = false 关闭
+     * 可以使用 convention.http.generate-blank-favicon-ico = false 关闭
      */
     @Bean
-    @ConditionalOnProperty(name = "ykj.http.generate-blank-favicon-ico", havingValue = "true", matchIfMissing = true)
-    public BlankFaviconIcoController blankFaviconIcoController() {
+    @ConditionalOnProperty(name = "convention.http.generate-blank-favicon-ico", havingValue = "true", matchIfMissing = true)
+    public BlankFaviconIcoControllerImpl blankFaviconIcoController() {
         return new BlankFaviconIcoControllerImpl();
     }
 }

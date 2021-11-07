@@ -56,7 +56,7 @@ public final class ResultUtils {
      * @return 响应
      */
     @SuppressWarnings("unchecked")
-    public static <T> ResultVO<T> success(ResultVO<T> resultVO, T data) {
+    public static <T> ResultVO<T> success(ResultVO<T> resultVO, @Nullable T data) {
         // 如果已经是 ResultVO 类型，则直接返回
         // 将data中的公共属性,设置为resultVO的属性
         if (data instanceof ResultVO) {

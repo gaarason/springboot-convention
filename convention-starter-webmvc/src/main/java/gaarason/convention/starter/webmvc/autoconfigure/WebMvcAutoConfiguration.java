@@ -6,6 +6,7 @@ import gaarason.convention.common.model.exception.BusinessException;
 import gaarason.convention.common.model.exception.StatusCode;
 import gaarason.convention.common.model.pojo.ResultVO;
 import gaarason.convention.common.provider.ChainProvider;
+import gaarason.convention.common.provider.LogProvider;
 import gaarason.convention.common.util.JsonUtils;
 import gaarason.convention.common.util.ObjectUtils;
 import gaarason.convention.common.web.util.ResponseUtils;
@@ -199,7 +200,7 @@ public class WebMvcAutoConfiguration {
                             getNext().invoke(request, response);
                         }
                         // 此处手动清除下, 更加保险
-                        ChainProvider.clear();
+                        LogProvider.clear();
                     }
                 }));
             };

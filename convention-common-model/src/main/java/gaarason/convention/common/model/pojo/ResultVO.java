@@ -144,7 +144,7 @@ public class ResultVO<T> implements Serializable {
         return data;
     }
 
-    public void setData(T data) {
+    public void setData(@Nullable T data) {
         this.data = data;
     }
 
@@ -201,7 +201,7 @@ public class ResultVO<T> implements Serializable {
         return exception;
     }
 
-    public void setException(Throwable exception) {
+    public void setException(@Nullable Throwable exception) {
         this.exception = exception;
     }
 

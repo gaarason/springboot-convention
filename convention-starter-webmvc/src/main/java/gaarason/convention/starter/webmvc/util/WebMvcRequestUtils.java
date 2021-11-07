@@ -12,9 +12,9 @@ import org.apache.catalina.connector.Request;
 import org.apache.catalina.util.ParameterMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.slf4j.MDC;
 import org.springframework.http.MediaType;
 import org.springframework.lang.Nullable;
+import org.springframework.util.StringUtils;
 
 import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpServletRequest;
@@ -38,37 +38,26 @@ public final class WebMvcRequestUtils {
     }
 
     /**
-     * 在请求头中获取信息, 依次获取有值则提前返回
+     * 在请求头中获取信息, 依次获取有值则提前返回, 都不存在时返回默认值
      * @param defaultValue   默认值
      * @param servletRequest request
      * @param keys           头中的keys
      * @return 头中的key的value
      */
     public static String getOneInHeader(String defaultValue, ServletRequest servletRequest, String... keys) {
-        String header = getOneInHeader(servletRequest, keys);
-        return header != null ? header : defaultValue;
-    }
-
-    /**
-     * 在请求头中获取信息, 依次获取有值则提前返回
-     * @param servletRequest request
-     * @param keys           头中的keys
-     * @return 头中的key的value
-     */
-    @Nullable
-    public static String getOneInHeader(ServletRequest servletRequest, String... keys) {
+        String header = null;
         try {
             HttpServletRequest httpServletRequest = (HttpServletRequest) servletRequest;
             for (String key : keys) {
-                String header = httpServletRequest.getHeader(key);
+                header = httpServletRequest.getHeader(key);
                 if (header != null) {
-                    return header;
+                    break;
                 }
             }
         } catch (Throwable e) {
-            WebMvcRequestUtils.LOGGER.error("getOneInHeader 处理{}出错", keys, e);
+            LOGGER.error("getOneInHeader 处理{}出错", keys, e);
         }
-        return null;
+        return header != null ? header : defaultValue;
     }
 
     /**
@@ -76,7 +65,7 @@ public final class WebMvcRequestUtils {
      * @param uriAndQuery eg: /test/request/mapping?id=123&timestamp=4434&validTime=30&sign=get_query|
      */
     public static void writeTheRequestRealUri(String uriAndQuery) {
-        MDC.put(WebMvcRequestUtils.WRITE_THE_REQUEST_REAL_URI_AND_QUERY_KEY, uriAndQuery);
+        ChainProvider.put(ChainProvider.ChainType.CAN_NOT_CROSS_PROCESS, WebMvcRequestUtils.WRITE_THE_REQUEST_REAL_URI_AND_QUERY_KEY, uriAndQuery);
     }
 
     /**
@@ -85,7 +74,7 @@ public final class WebMvcRequestUtils {
      */
     @Nullable
     public static String readTheRequestRealUri() {
-        return MDC.get(WebMvcRequestUtils.WRITE_THE_REQUEST_REAL_URI_AND_QUERY_KEY);
+        return ChainProvider.get(ChainProvider.ChainType.CAN_NOT_CROSS_PROCESS, WebMvcRequestUtils.WRITE_THE_REQUEST_REAL_URI_AND_QUERY_KEY);
     }
 
     /**
@@ -122,7 +111,7 @@ public final class WebMvcRequestUtils {
      */
     public static String dealTraceId(ServletRequest servletRequest) {
         return ChainProvider.computeIfAbsentTraceId(
-            () -> getOneInHeader(servletRequest, ChainProvider.CanCrossProcessKey.TRACE_ID.getHttpHeaderKey()));
+            () -> getOneInHeader("", servletRequest, ChainProvider.CanCrossProcessKey.TRACE_ID.getHttpHeaderKey()));
     }
 
     /**
@@ -139,6 +128,9 @@ public final class WebMvcRequestUtils {
      * @param request HttpRequest
      */
     public static void printHttpProviderReceivedRequestLog(HttpServletRequest request) {
+        // 设置其他上下文
+        setChainContext(request);
+
         // 设置traceId
         ChainProvider.put(ChainProvider.CanCrossProcessKey.TRACE_ID, dealTraceId(request));
 
@@ -159,9 +151,6 @@ public final class WebMvcRequestUtils {
         // 设置请求URL
         String requestUrl = WebMvcRequestUtils.dealRequestUrl(request);
         ChainProvider.put(ChainProvider.CanNotCrossProcessKey.REQUEST_URL, requestUrl.isEmpty() ? requestRealUrl : requestUrl);
-
-        // 设置自定义上下文
-        SpringUtils.getBean(ChainContextHandlerContract.class).conversion(generateRequest(request));
 
         // 请求入口日志
         LogProvider.getInstance().printHttpProviderReceivedRequestLog();
@@ -290,4 +279,19 @@ public final class WebMvcRequestUtils {
         }
         return new GeneralRequest<>(theRequest.getQueryString(), header, theRequest);
     }
+
+    /**
+     * 设置请求上下文信息
+     * @param request 请求
+     */
+    public static void setChainContext(HttpServletRequest request) {
+        for (ChainProvider.CanCrossProcessKey processKey : ChainProvider.CanCrossProcessKey.values()) {
+            String value = request.getHeader(processKey.getHttpHeaderKey());
+            ChainProvider.put(processKey, value);
+        }
+
+        // 自定义上下文
+        SpringUtils.getBean(ChainContextHandlerContract.class).conversion(generateRequest(request));
+    }
+
 }

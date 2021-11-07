@@ -4,6 +4,7 @@ import gaarason.convention.common.model.exception.BusinessException;
 import gaarason.convention.common.model.exception.StatusCode;
 import gaarason.convention.common.model.pojo.ResultVO;
 import gaarason.convention.common.util.ResultUtils;
+import org.springframework.lang.Nullable;
 
 import java.io.Serializable;
 
@@ -21,7 +22,7 @@ public class ResultExpand<T> extends ResultVO<T> {
      * @param data 待包装数据
      * @return 响应
      */
-    public ResultVO<T> success(T data) {
+    public ResultVO<T> success(@Nullable T data) {
         return ResultUtils.success(this, data);
     }
 
@@ -41,8 +42,8 @@ public class ResultExpand<T> extends ResultVO<T> {
      * @param e          异常
      * @return 响应
      */
-    public ResultVO<T> warn(StatusCode statusCode, String message, Throwable e) {
-        return ResultUtils.warn(this, statusCode, message, e);
+    public ResultVO<T> warn(StatusCode statusCode, @Nullable String message, Throwable e) {
+        return ResultUtils.warn(this, statusCode, message != null ? message : statusCode.getMessage(), e);
     }
 
     /**

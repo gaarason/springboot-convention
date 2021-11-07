@@ -1,5 +1,7 @@
 package gaarason.convention.common.model.exception;
 
+import org.springframework.lang.Nullable;
+
 import java.io.Serializable;
 import java.util.*;
 
@@ -17,6 +19,7 @@ public class BusinessException extends RuntimeException {
     /**
      * 错误补充信息, 出现在响应对象的 data 中
      */
+    @Nullable
     protected final Serializable error;
 
     /**
@@ -24,14 +27,14 @@ public class BusinessException extends RuntimeException {
      */
     protected final HashMap<Object, Object> debug = new HashMap<>(16);
 
-    public BusinessException(int code, String message, Serializable error, DebugFunctionalInterface makeDebug) {
+    public BusinessException(int code, @Nullable String message, @Nullable Serializable error, DebugFunctionalInterface makeDebug) {
         super(message);
         this.code = code;
         this.error = error;
         makeDebug.run(debug);
     }
 
-    public BusinessException(int code, String message, Serializable error, DebugFunctionalInterface makeDebug, Throwable e) {
+    public BusinessException(int code, @Nullable String message, @Nullable Serializable error, DebugFunctionalInterface makeDebug, Throwable e) {
         super(message, e);
         this.code = code;
         this.error = error;
@@ -124,6 +127,7 @@ public class BusinessException extends RuntimeException {
         return code;
     }
 
+    @Nullable
     public Serializable getError() {
         return error;
     }
@@ -136,10 +140,11 @@ public class BusinessException extends RuntimeException {
     public StackTraceElement[] getStackTrace() {
         StackTraceElement[] stackTrace = super.getStackTrace();
         List<StackTraceElement> stackTraceElements = new ArrayList<>(Arrays.asList(stackTrace));
-        StackTraceElement errorElement = new StackTraceElement(getClass().toString().replace("class ", ""), "ERROR", error.toString(), 1);
-        StackTraceElement debugElement = new StackTraceElement(getClass().toString().replace("class ", ""), "DEBUG", debug.toString(), debug.size());
-        stackTraceElements.add(errorElement);
-        stackTraceElements.add(debugElement);
+
+        if(error != null){
+            stackTraceElements.add(new StackTraceElement(getClass().toString().replace("class ", ""), "ERROR", error.toString(), 1));
+        }
+        stackTraceElements.add(new StackTraceElement(getClass().toString().replace("class ", ""), "DEBUG", debug.toString(), debug.size()));
         return stackTraceElements.toArray(new StackTraceElement[0]);
     }
 

@@ -43,7 +43,7 @@ public class ResponseUtils {
             }
         } else {
             // 正常日志
-            logProvider.printHttpProviderSendingResponseLog(() -> result == null ? FinalVariable.NULL : result.toString());
+            logProvider.printHttpProviderSendingResponseLog(() -> String.valueOf(result));
         }
         return result;
     }

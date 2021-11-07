@@ -274,7 +274,7 @@ public class ConventionProperties implements Serializable {
          * 控制台的日志格式
          */
         private String consolePattern =
-            "%style{%d{yyyy-MM-dd HH:mm:ss.SSS}}{} %highlight{%-5level} %style{[%thread]}{} %style{%c}{magenta} %style{%X{TRACE_ID} @ %X{TENANT_CODE} @ %X{USER_ID} @ %X{USER_ACCOUNT}}{Cyan} %style{%msg}{green}%n";
+            "%style{%d{yyyy-MM-dd HH:mm:ss.SSS}}{} %highlight{%-5level} %style{[%thread]}{} %style{%c}{magenta} %style{%X{CAN_CROSS_PROCESS|TRACE_ID} @ %X{CAN_CROSS_PROCESS|TENANT_ID} @ %X{CAN_CROSS_PROCESS|TENANT_CODE} @ %X{CAN_CROSS_PROCESS|USER_ID} @ %X{CAN_CROSS_PROCESS|USER_ACCOUNT}}{Cyan} %style{%msg}{green} %n";
 
         /**
          * 控制台的日志级别
@@ -285,7 +285,7 @@ public class ConventionProperties implements Serializable {
          * json文件日志格式
          */
         private String jsonPattern =
-            "{\"@timestamp\":\"%d{yyyy-MM-dd HH:mm:ss.SSS}\",\"level\":\"%level\",\"thread\":\"%thread\",\"class\":\"%c\",\"trace_id\":\"%X{TRACE_ID}\",\"tenant_code\":\"%X{TENANT_CODE}\",\"user_id\":\"%X{USER_ID}\",\"user_account\":\"%X{USER_ACCOUNT}\",\"msg\":\"%msg\",\"exception\":\"%exception\",\"application\":\"${sys:spring.application.name}\",\"env\":\"${sys:spring.profiles.active}\"}%n";
+            "{\"@timestamp\":\"%d{yyyy-MM-dd HH:mm:ss.SSS}\",\"level\":\"%level\",\"thread\":\"%thread\",\"class\":\"%c\",\"trace_id\":\"%X{CAN_CROSS_PROCESS|TRACE_ID}\",\"tenant_code\":\"%X{CAN_CROSS_PROCESS|TENANT_CODE}\",\"tenant_id\":\"%X{CAN_CROSS_PROCESS|TENANT_ID}\",\"user_id\":\"%X{CAN_CROSS_PROCESS|USER_ID}\",\"user_account\":\"%X{CAN_CROSS_PROCESS|USER_ACCOUNT}\",\"msg\":\"%msg\",\"exception\":\"%exception\",\"application\":\"${sys:spring.application.name}\",\"env\":\"${sys:spring.profiles.active}\"}%n";
 
         /**
          * json文件日志级别

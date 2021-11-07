@@ -4,7 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 /**
- * @author mof01
+ * @author xt
  */
 public final class EncryptionRc4Utils {
 

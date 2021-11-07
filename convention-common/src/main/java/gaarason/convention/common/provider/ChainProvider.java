@@ -29,19 +29,21 @@ public final class ChainProvider {
     }
 
     /**
-     * 将"键"与"值"设置到指定map
+     * 将"键"与"值"设置到指定map与MDC
      * @param dataMap 指定map
      * @param type    上下文类型
      * @param key     键
      * @param value   值
      */
     public static void put(Map<String, Object> dataMap, ChainType type, String key, String value) {
-        final Map<String, String> localMap = getRealMap(dataMap, type);
-        localMap.put(key, value);
+        // map 写入
+        getRealMap(dataMap, type).put(key, value);
+        // MDC写入
+        put(type, key, value);
     }
 
     /**
-     * 将"键"与"值"设置到指定map
+     * 将"键"与"值"设置到指定map与MDC
      * @param dataMap 指定map
      * @param key     键
      * @param value   值
@@ -51,7 +53,7 @@ public final class ChainProvider {
     }
 
     /**
-     * 将"键"与"值"设置到指定map
+     * 将"键"与"值"设置到指定map与MDC
      * @param dataMap 指定map
      * @param key     键
      * @param value   值
@@ -299,11 +301,15 @@ public final class ChainProvider {
     }
 
     /**
-     * 移除指定map的所有"键"(仅影响有本类设置的内容)
-     * @param dataMap 指定msp
+     * 移除指定map与MDC中的所有"键"(仅影响有本类设置的内容)
+     * @param dataMap 指定map
      */
     public static void clear(Map<String, Object> dataMap) {
+        // map清理
         Arrays.stream(ChainType.values()).forEach(chainType -> dataMap.remove(chainType.name()));
+
+        // MDC清理
+        clear();
     }
 
     /**
@@ -370,7 +376,7 @@ public final class ChainProvider {
      * @return 键名（含前缀）
      */
     private static String generateKey(ChainType type, String key) {
-        return type.name() + key;
+        return type.name() + "|" + key;
     }
 
     /**
@@ -380,7 +386,7 @@ public final class ChainProvider {
      * @return 键（不含前缀）
      */
     private static String reductionKey(ChainType type, String key) {
-        return StringUtils.ltrim(key, type.name());
+        return StringUtils.ltrim(key + "|", type.name());
     }
 
     /**
