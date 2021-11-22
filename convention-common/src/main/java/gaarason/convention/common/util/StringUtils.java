@@ -264,10 +264,10 @@ public class StringUtils {
      */
     public static byte[] readBytes(BufferedReader br, String originallyEncoding) {
         try {
-            String str;
             StringBuilder retStr = new StringBuilder();
-            while ((str = br.readLine()) != null) {
-                retStr.append(str).append("\r\n");
+            int read;
+            while ((read = br.read()) != -1) {
+                retStr.append((char) read);
             }
             if (retStr.length() > 0) {
                 return retStr.toString().getBytes(Charset.forName(originallyEncoding));
