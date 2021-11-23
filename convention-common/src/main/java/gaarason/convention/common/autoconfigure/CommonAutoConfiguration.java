@@ -1,6 +1,8 @@
 package gaarason.convention.common.autoconfigure;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import gaarason.convention.common.provider.LogProvider;
+import gaarason.convention.common.util.JsonUtils;
 import gaarason.convention.common.util.SpringUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -28,5 +30,11 @@ public class CommonAutoConfiguration implements ApplicationContextAware {
     @ConditionalOnMissingBean
     public LogProvider logProvider() {
         return new LogProvider();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public ObjectMapper objectMapper() {
+        return JsonUtils.getMapper();
     }
 }
