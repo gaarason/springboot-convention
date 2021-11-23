@@ -95,6 +95,9 @@ public class HttpUtils {
         private String stringBody = "";
 
         @Nullable
+        private byte[] bytesBody = null;
+
+        @Nullable
         private MediaType mediaType;
 
         @Nullable
@@ -386,6 +389,13 @@ public class HttpUtils {
             return this;
         }
 
+        public RequestBuilder setBody(byte[] bytes, @Nullable MediaType mediaType) {
+            lockBodyType(BodyType.MEDIA_TYPE);
+            bytesBody = bytes;
+            this.mediaType = mediaType;
+            return this;
+        }
+
         /**
          * 执行同步请求
          * @param retryMaxTime 最大重试次数
@@ -516,6 +526,14 @@ public class HttpUtils {
                 case MEDIA_TYPE:
                     body = RequestBody.create(stringBody, mediaType);
                     logBodyCache = stringBody;
+
+                    if (!ObjectUtils.isEmpty(bytesBody)) {
+                        body = RequestBody.create(bytesBody, mediaType);
+                        logBodyCache = Arrays.toString(bytesBody);
+                    } else {
+                        body = RequestBody.create(stringBody, mediaType);
+                        logBodyCache = stringBody;
+                    }
                     break;
                 case XML:
                 case JSON:
