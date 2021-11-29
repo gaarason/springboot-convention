@@ -57,30 +57,6 @@ public class UtilsTest {
 
     @Test
     public void stringUtilsLineToHump() {
-        // 默认小驼峰
-        Assertions.assertEquals("stuTea", StringUtils.lineToHump("stu_tea"));
-        Assertions.assertEquals("stuTeaOok", StringUtils.lineToHump("stu_tea_ook"));
-        Assertions.assertEquals("stuTeaOok", StringUtils.lineToHump("stu_tea_ook__"));
-        Assertions.assertEquals("stuTea", StringUtils.lineToHump("_stu_tea"));
-        Assertions.assertEquals("stuTea", StringUtils.lineToHump("__stu_tea"));
-
-        // 指定小驼峰
-        Assertions.assertEquals("stuTea", StringUtils.lineToHump("stu_tea", false));
-        Assertions.assertEquals("stuTeaOok", StringUtils.lineToHump("stu_tea_ook", false));
-        Assertions.assertEquals("stuTeaOok", StringUtils.lineToHump("stu_tea_ook__", false));
-        Assertions.assertEquals("stuTea", StringUtils.lineToHump("_stu_tea", false));
-        Assertions.assertEquals("stuTea", StringUtils.lineToHump("__stu_tea", false));
-
-        // 指定大驼峰
-        Assertions.assertEquals("StuTea", StringUtils.lineToHump("stu_tea", true));
-        Assertions.assertEquals("StuTeaOok", StringUtils.lineToHump("stu_tea_ook", true));
-        Assertions.assertEquals("StuTeaOok", StringUtils.lineToHump("stu_tea_ook__", true));
-        Assertions.assertEquals("StuTea", StringUtils.lineToHump("_stu_tea", true));
-        Assertions.assertEquals("StuTea", StringUtils.lineToHump("__stu_tea", true));
-
-        // 其他情况
-        Assertions.assertEquals("stuTea", StringUtils.lineToHump("stuTea"));
-        Assertions.assertEquals("stuTeaOok", StringUtils.lineToHump("stu_teaOok"));
 
     }
 

@@ -6,7 +6,6 @@ import gaarason.convention.common.model.exception.StatusCode;
 import gaarason.convention.common.provider.ChainProvider;
 import gaarason.convention.common.provider.LogProvider;
 import okhttp3.*;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.lang.Nullable;
 
 import java.io.*;
@@ -15,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.zip.GZIPInputStream;
 
 /**
@@ -92,16 +92,27 @@ public class HttpUtils {
 
         private final Map<String, Object> mapBody = new HashMap<>(16);
 
-        private String stringBody = "";
+        private byte[] bytesBody = new byte[0];
 
-        @Nullable
-        private byte[] bytesBody = null;
+        private Supplier<String> logBodyCache = () -> "";
+
+        /**
+         * 请求日志记录(DEFAULT 表示使用全局配置)
+         */
+        private FinalVariable.Bool clientSendingRequestLogEnable = FinalVariable.Bool.DEFAULT;
+
+        /**
+         * 请求重试日志记录(DEFAULT 表示使用全局配置)
+         */
+        private FinalVariable.Bool clientSendingRequestRetryLogEnable = FinalVariable.Bool.DEFAULT;
+
+        /**
+         * 响应日志记录(DEFAULT 表示使用全局配置)
+         */
+        private FinalVariable.Bool clientReceivedResponseLogEnable = FinalVariable.Bool.DEFAULT;
 
         @Nullable
         private MediaType mediaType;
-
-        @Nullable
-        private String logBodyCache;
 
         private final LogProvider logProvider;
 
@@ -132,8 +143,8 @@ public class HttpUtils {
             logProvider = LogProvider.getInstance();
 
             setHeader(HTTP_HEADER_ACCEPT_CHARSET, "UTF-8");
-//            setHeader(HTTP_HEADER_CONNECTION, "keep-alive");
-            setHeader(HTTP_HEADER_CONNECTION, "close");
+            setHeader(HTTP_HEADER_CONNECTION, "keep-alive");
+//            setHeader(HTTP_HEADER_CONNECTION, "close");
             setHeader(HTTP_HEADER_ACCEPT_ENCODING, "");
         }
 
@@ -257,6 +268,36 @@ public class HttpUtils {
         }
 
         /**
+         * 是否开启请求日志(目前仅支持传递false时关闭)
+         * @param bool 是否
+         * @return 请求构造器
+         */
+        public RequestBuilder setClientSendingRequestLogEnable(FinalVariable.Bool bool) {
+            clientSendingRequestLogEnable = bool;
+            return this;
+        }
+
+        /**
+         * 是否开启请求重试日志(目前仅支持传递false时关闭)
+         * @param bool 是否
+         * @return 请求构造器
+         */
+        public RequestBuilder setClientSendingRequestRetryLogEnable(FinalVariable.Bool bool) {
+            clientSendingRequestRetryLogEnable = bool;
+            return this;
+        }
+
+        /**
+         * 是否开启响应日志(目前仅支持传递false时关闭)
+         * @param bool 是否
+         * @return 请求构造器
+         */
+        public RequestBuilder setClientReceivedResponseLogEnable(FinalVariable.Bool bool) {
+            clientReceivedResponseLogEnable = bool;
+            return this;
+        }
+
+        /**
          * 设置是否打开 保持链接
          * @param open 开/关
          * @return 请求构造器
@@ -366,27 +407,24 @@ public class HttpUtils {
 
         public RequestBuilder setJsonBody(String jsonString) {
             lockBodyType(BodyType.JSON);
-            stringBody = jsonString;
+            bytesBody = jsonString.getBytes(StandardCharsets.UTF_8);
             return setHeader(HttpUtils.HTTP_HEADER_CONTENT_TYPE, "application/json;charset=utf-8");
         }
 
         public RequestBuilder setJsonBody(Serializable value) {
             lockBodyType(BodyType.JSON);
-            stringBody = JsonUtils.objectToJson(value);
+            bytesBody = JsonUtils.objectToJson(value).getBytes(StandardCharsets.UTF_8);
             return setHeader(HttpUtils.HTTP_HEADER_CONTENT_TYPE, "application/json;charset=utf-8");
         }
 
         public RequestBuilder setXmlBody(String value) {
             lockBodyType(BodyType.XML);
-            stringBody = value;
+            bytesBody = value.getBytes(StandardCharsets.UTF_8);
             return setHeader(HttpUtils.HTTP_HEADER_CONTENT_TYPE, "application/xml;charset=utf-8");
         }
 
         public RequestBuilder setBody(String value, @Nullable MediaType mediaType) {
-            lockBodyType(BodyType.MEDIA_TYPE);
-            stringBody = value;
-            this.mediaType = mediaType;
-            return this;
+            return setBody(value.getBytes(StandardCharsets.UTF_8), mediaType);
         }
 
         public RequestBuilder setBody(byte[] bytes, @Nullable MediaType mediaType) {
@@ -418,7 +456,7 @@ public class HttpUtils {
         public HttpResult exec(Request request, int retryMaxTime) {
             try {
                 // 请求日志记录
-                logProvider.printHttpConsumerSendingRequestLog(request, logBodyCache);
+                logProvider.printHttpConsumerSendingRequestLog(clientSendingRequestLogEnable, request, logBodyCache);
 
                 // 执行请求与网络错误重试
                 Response response = sync(request, retryMaxTime);
@@ -452,7 +490,7 @@ public class HttpUtils {
          */
         public void exec(Request request, int retryMaxTime, CallbackInterface callbackInterface) {
             // 请求日志记录
-            logProvider.printHttpConsumerSendingRequestLog(request, logBodyCache);
+            logProvider.printHttpConsumerSendingRequestLog(clientSendingRequestLogEnable, request, logBodyCache);
             // 执行异步请求与网络错误重试
             async(request, 0, retryMaxTime, callbackInterface);
         }
@@ -516,30 +554,22 @@ public class HttpUtils {
             switch (bodyType) {
                 case FORM:
                     body = formBody.build();
-                    logBodyCache = mapBody.toString();
+                    logBodyCache = mapBody::toString;
                     break;
                 case MULTIPART:
                     multipartBody.setType(MultipartBody.FORM);
                     body = multipartBody.build();
-                    logBodyCache = mapBody.toString();
+                    logBodyCache = mapBody::toString;
                     break;
                 case MEDIA_TYPE:
-                    body = RequestBody.create(stringBody, mediaType);
-                    logBodyCache = stringBody;
-
-                    if (!ObjectUtils.isEmpty(bytesBody)) {
-                        body = RequestBody.create(bytesBody, mediaType);
-                        logBodyCache = Arrays.toString(bytesBody);
-                    } else {
-                        body = RequestBody.create(stringBody, mediaType);
-                        logBodyCache = stringBody;
-                    }
+                    body = RequestBody.create(bytesBody, mediaType);
+                    logBodyCache = () -> new String(bytesBody);
                     break;
                 case XML:
                 case JSON:
                 default:
-                    body = RequestBody.create(stringBody.getBytes(StandardCharsets.UTF_8));
-                    logBodyCache = stringBody;
+                    body = RequestBody.create(bytesBody);
+                    logBodyCache = () -> new String(bytesBody);
             }
             return body;
         }
@@ -577,12 +607,12 @@ public class HttpUtils {
                 } catch (Throwable e) {
                     if (retryTime > retryMaxTime) {
                         // 重试失败日志记录
-                        logProvider.printHttpConsumerSendingRequestRetryGiveUpLog(retryTime - 1);
+                        logProvider.printHttpConsumerSendingRequestRetryGiveUpLog(clientSendingRequestRetryLogEnable, retryTime - 1);
 
                         throw e;
                     }
                     // 重试日志记录
-                    logProvider.printHttpConsumerSendingRequestRetryLog(retryTime, retryMaxTime);
+                    logProvider.printHttpConsumerSendingRequestRetryLog(clientSendingRequestRetryLogEnable, retryTime, retryMaxTime);
                 }
             }
             throw new BusinessException(StatusCode.HTTP_REQUEST_API_RETRY_TIME_ERROR);
@@ -606,20 +636,20 @@ public class HttpUtils {
             httpClient.newCall(request).enqueue(new Callback() {
 
                 @Override
-                public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                public void onFailure(Call call, IOException e) {
                     // 将指定map中的所有有效"键"与"值"，赋值到MDC
                     ChainProvider.initMDC(mdcInfo);
 
                     if (nextRetryTime <= retryMaxTime) {
 
                         // 重试日志记录
-                        logProvider.printHttpConsumerSendingRequestRetryLog(retryTime, retryMaxTime);
+                        logProvider.printHttpConsumerSendingRequestRetryLog(clientSendingRequestRetryLogEnable, retryTime, retryMaxTime);
 
                         // 执行异步请求
                         async(request, nextRetryTime, retryMaxTime, callbackInterface);
                     } else {
                         // 重试失败日志记录
-                        logProvider.printHttpConsumerSendingRequestRetryGiveUpLog(retryTime);
+                        logProvider.printHttpConsumerSendingRequestRetryGiveUpLog(clientSendingRequestRetryLogEnable, retryTime);
 
                         callbackInterface.call(null,
                             new BusinessException(StatusCode.HTTP_REQUEST_API_ERROR, map -> map.put("request", request.toString()), e));
@@ -629,7 +659,7 @@ public class HttpUtils {
                 }
 
                 @Override
-                public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                public void onResponse(Call call, Response response) {
                     // 将指定map中的所有有效"键"与"值"，赋值到MDC
                     ChainProvider.initMDC(mdcInfo);
 
@@ -645,22 +675,14 @@ public class HttpUtils {
          * @param request  请求
          * @param response 响应
          * @return 包装后的响应体
-         * @throws IOException 响应解析异常
          */
-        protected HttpResult analysisResponse(Request request, Response response) throws IOException {
-            Headers responseHeaders = response.headers();
+        protected HttpResult analysisResponse(Request request, Response response) {
+            // 响应对象
+            HttpResult httpResult = new HttpResult(request, response, acceptEncodingGzip);
+            // 对于单个请求是否开启响应日志
+            logProvider.printHttpConsumerReceivedResponseLog(clientReceivedResponseLogEnable, request, response, httpResult::getBodyString);
 
-            // 响应体字符串
-            String responseBodyString = FinalVariable.NULL;
-            try (ResponseBody body = response.body()) {
-                if (body != null) {
-                    responseBodyString = acceptEncodingGzip ? HttpUtils.gzipDecode(body.bytes(), responseHeaders.toMultimap()) : body.string();
-                }
-            } finally {
-                // 响应日志记录
-                logProvider.printHttpConsumerReceivedResponseLog(request, response, responseBodyString);
-            }
-            return new HttpResult(response, responseHeaders, responseBodyString);
+            return httpResult;
         }
 
         /**
@@ -773,6 +795,7 @@ public class HttpUtils {
         MEDIA_TYPE
     }
 
+
     /**
      * http响应
      */
@@ -780,16 +803,26 @@ public class HttpUtils {
 
         private static final long serialVersionUID = 1L;
 
-        private final Response response;
+        private final transient Request request;
 
-        private final Headers headers;
+        private final transient Response response;
 
-        private final String bodyString;
+        private final transient Headers headers;
 
-        public HttpResult(Response response, Headers headers, String bodyString) {
+        private final boolean acceptEncodingGzip;
+
+        @Nullable
+        private String bodyString;
+
+        public HttpResult(Request request, Response response, boolean acceptEncodingGzip) {
+            this.request = request;
             this.response = response;
-            this.headers = headers;
-            this.bodyString = bodyString;
+            this.acceptEncodingGzip = acceptEncodingGzip;
+            this.headers = request.headers();
+        }
+
+        public Request getRequest() {
+            return request;
         }
 
         public Response getResponse() {
@@ -801,12 +834,28 @@ public class HttpUtils {
         }
 
         public String getBodyString() {
+            if (bodyString == null) {
+                bodyString = FinalVariable.EMPTY_STRING;
+                try (ResponseBody body = response.body()) {
+                    if (body != null) {
+                        bodyString = acceptEncodingGzip ? HttpUtils.gzipDecode(body.bytes(), headers.toMultimap()) : body.string();
+                    }
+                } catch (Throwable e) {
+                    throw new BusinessException(StatusCode.HTTP_REQUEST_API_ERROR, map -> map.put("request", request.toString()), e);
+                }
+            }
             return bodyString;
         }
 
         @Override
         public String toString() {
-            return "HttpResult{" + "response=" + response + ", headers=" + headers + ", bodyString='" + bodyString + '\'' + '}';
+            return "HttpResult{" +
+                "request=" + request +
+                ", response=" + response +
+                ", headers=" + headers +
+                ", acceptEncodingGzip=" + acceptEncodingGzip +
+                ", bodyString='" + getBodyString() + '\'' +
+                '}';
         }
     }
 }

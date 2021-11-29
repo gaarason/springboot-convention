@@ -174,6 +174,11 @@ public class ConventionProperties implements Serializable {
         private boolean consumerSendingRequest = true;
 
         /**
+         * 客户端 发送请求 重试日志
+         */
+        private boolean consumerSendingRequestRetry = true;
+
+        /**
          * 客户端 接收响应 日志
          */
         private boolean consumerReceivedResponse = true;
@@ -208,6 +213,14 @@ public class ConventionProperties implements Serializable {
 
         public void setConsumerSendingRequest(boolean consumerSendingRequest) {
             this.consumerSendingRequest = consumerSendingRequest;
+        }
+
+        public boolean isConsumerSendingRequestRetry() {
+            return consumerSendingRequestRetry;
+        }
+
+        public void setConsumerSendingRequestRetry(boolean consumerSendingRequestRetry) {
+            this.consumerSendingRequestRetry = consumerSendingRequestRetry;
         }
 
         public boolean isConsumerReceivedResponse() {

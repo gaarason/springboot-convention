@@ -65,6 +65,12 @@
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>com.github.gaarason</groupId>
+            <artifactId>convention-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
 

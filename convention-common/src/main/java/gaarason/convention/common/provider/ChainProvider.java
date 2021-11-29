@@ -344,15 +344,6 @@ public final class ChainProvider {
     }
 
     /**
-     * 是否有可用的skyWalking的traceId
-     * @return bool
-     */
-    public static boolean hasSkyWalkingTraceId() {
-        final String traceId = TraceContext.traceId();
-        return StringUtils.hasText(traceId) && !NO_FOUND_SKY_WALKING_TRACE_ID.equalsIgnoreCase(traceId);
-    }
-
-    /**
      * 得到 traceId （不会进行任何设置与记录）
      * 优先skyWalking, 其次func, 最后自动生成
      * @param func 函数

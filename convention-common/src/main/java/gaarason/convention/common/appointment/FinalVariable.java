@@ -88,6 +88,27 @@ public class FinalVariable {
     }
 
     /**
+     * 通用开关枚举值
+     */
+    public enum Bool {
+
+        /**
+         * 指定 true
+         */
+        TRUE,
+
+        /**
+         * 指定 false
+         */
+        FALSE,
+
+        /**
+         * 使用全局默认配置
+         */
+        DEFAULT;
+    }
+
+    /**
      * 时间相关
      */
     public static class Timestamp {

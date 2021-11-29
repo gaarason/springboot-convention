@@ -199,54 +199,67 @@ public class LogProvider {
         printHttpProviderSendingResponseLog(obj::toString);
     }
 
+
     /**
      * 记录日志 客户端发送 http 请求, 重试失败
-     * @param retryTime 已经进行重试次数
+     * @param enable 是否启用, DEFAULT 表示使用全局配置
+     * @param retryTime 已经进行的重试次数
      */
-    public void printHttpConsumerSendingRequestRetryGiveUpLog(final int retryTime) {
-        if (conventionProperties.getHttp().getLog().isConsumerSendingRequest()) {
+    public void printHttpConsumerSendingRequestRetryGiveUpLog(FinalVariable.Bool enable, final int retryTime) {
+        if(enable == FinalVariable.Bool.TRUE || (enable == FinalVariable.Bool.DEFAULT && conventionProperties.getHttp().getLog().isConsumerSendingRequestRetry())){
             LogProvider.LOGGER.info("Http client sending request, it has been retried {} times, now give up.", retryTime);
         }
     }
 
     /**
      * 记录日志 客户端发送 http 请求, 重试日志
+     * @param enable 是否启用, DEFAULT 表示使用全局配置
      * @param retryTime    当前第几次重试
      * @param retryMaxTime 最大重试次数请求
      */
-    public void printHttpConsumerSendingRequestRetryLog(final int retryTime, final int retryMaxTime) {
-        if (conventionProperties.getHttp().getLog().isConsumerSendingRequest()) {
+    public void printHttpConsumerSendingRequestRetryLog(FinalVariable.Bool enable, final int retryTime, final int retryMaxTime) {
+        if (enable == FinalVariable.Bool.TRUE || (enable == FinalVariable.Bool.DEFAULT && conventionProperties.getHttp().getLog().isConsumerSendingRequest())) {
             LogProvider.LOGGER.info("Http client sending request, try again for the {}th, up to {} times.", retryTime, retryMaxTime);
         }
     }
 
     /**
      * 记录日志 客户端发送 http 请求
+     * @param enable 是否启用, DEFAULT 表示使用全局配置
      * @param request    请求
      * @param bodyString 请求体日志字符串
      */
-    public void printHttpConsumerSendingRequestLog(final Request request, final String bodyString) {
-        if (conventionProperties.getHttp().getLog().isConsumerSendingRequest()) {
+    public void printHttpConsumerSendingRequestLog(FinalVariable.Bool enable, Request request, Supplier<String> bodyString) {
+        if (enable == FinalVariable.Bool.TRUE || (enable == FinalVariable.Bool.DEFAULT && conventionProperties.getHttp().getLog().isConsumerSendingRequest())) {
             LogProvider.LOGGER.info("Http client sending request, url[{}], method[{}], headers[{}], request body[{}].",
                 request.url().url().toString(),
-                request.method(), request.headers().toMultimap(), bodyString);
+                request.method(), request.headers().toMultimap(), bodyString.get());
         }
     }
 
     /**
+     * 是否 记录日志 客户端接收 http 响应
+     * @param enable 是否启用, DEFAULT 表示使用全局配置
+     * @return 是否
+     */
+    public boolean isPrintHttpConsumerReceivedResponseLog(FinalVariable.Bool enable) {
+        return enable == FinalVariable.Bool.TRUE || (enable == FinalVariable.Bool.DEFAULT && conventionProperties.getHttp().getLog().isConsumerReceivedResponse());
+    }
+
+    /**
      * 记录日志 客户端接收 http 响应
+     * @param enable 是否启用, DEFAULT 表示使用全局配置
      * @param request            请求
      * @param response           响应
      * @param responseBodyString 响应体字符串
      */
-    public void printHttpConsumerReceivedResponseLog(final Request request, final Response response, final String responseBodyString) {
-        if (conventionProperties.getHttp().getLog().isConsumerReceivedResponse()) {
+    public void printHttpConsumerReceivedResponseLog(FinalVariable.Bool enable, Request request, Response response, Supplier<String> responseBodyString) {
+        if (isPrintHttpConsumerReceivedResponseLog(enable)) {
             LogProvider.LOGGER.info("Http client received response, request[{}], response[{}], response header[{}], response body[{}].",
                 request.toString(),
-                response.toString(), response.headers().toMultimap(), responseBodyString);
+                response.toString(), response.headers().toMultimap(), responseBodyString.get());
         }
     }
-
     /**
      * 记录日志 服务端接收 dubbo 请求
      */
