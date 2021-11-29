@@ -4,14 +4,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 /**
+ *
  * @author xt
  */
 public final class EncryptionRc4Utils {
 
     private EncryptionRc4Utils() {
     }
-
-    private static final String MP_SECRET = "1a8ce7910f7bb946d06dd3154f2f6991";
 
     private static final Integer MAX_INT = 256;
 
@@ -57,13 +56,4 @@ public final class EncryptionRc4Utils {
         return ciphertext;
     }
 
-    /**
-     * 平台身份token
-     * @return token
-     */
-    public static String mpToken() {
-        byte[] bytes = ("request_time:" + (System.currentTimeMillis() / 1000)).getBytes(StandardCharsets.UTF_8);
-        byte[] encrypt = EncryptionRc4Utils.encrypt(bytes, EncryptionRc4Utils.MP_SECRET.getBytes(StandardCharsets.UTF_8));
-        return Base64.getEncoder().encodeToString(encrypt);
-    }
 }

@@ -6,6 +6,7 @@ import gaarason.convention.common.model.exception.StatusCode;
 import gaarason.convention.common.provider.ChainProvider;
 import gaarason.convention.common.provider.LogProvider;
 import okhttp3.*;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.lang.Nullable;
 
 import java.io.*;
@@ -137,6 +138,11 @@ public class HttpUtils {
          * 手动设置的优先级更高
          */
         private boolean chainTransferWithUrl = false;
+
+        /**
+         * 重试相关
+         */
+        private HttpRetryOption httpRetryOption = new HttpRetryOption();
 
         public RequestBuilder(OkHttpClient httpClient) {
             this.httpClient = httpClient;
@@ -298,6 +304,16 @@ public class HttpUtils {
         }
 
         /**
+         * 重试相关配置
+         * @param option 配置
+         * @return 请求构造器
+         */
+        public RequestBuilder setHttpRetryOption(HttpRetryOption option) {
+            httpRetryOption = ObjectUtils.deepCopy(option);
+            return this;
+        }
+
+        /**
          * 设置是否打开 保持链接
          * @param open 开/关
          * @return 请求构造器
@@ -436,30 +452,54 @@ public class HttpUtils {
 
         /**
          * 执行同步请求
-         * @param retryMaxTime 最大重试次数
+         * @param maxRetryTime 最大重试次数
          * @return 响应
          */
-        public HttpResult exec(int retryMaxTime) {
+        public HttpResult exec(int maxRetryTime) {
+            // 请求构造
+            Request request = requestBuild();
+            httpRetryOption.maxRetryTime = maxRetryTime;
+            // 执行同步请求
+            return exec(request);
+        }
+
+        /**
+         * 执行同步请求
+         * @return 响应
+         */
+        public HttpResult exec() {
             // 请求构造
             Request request = requestBuild();
             // 执行同步请求
-            return exec(request, retryMaxTime);
+            return exec(request);
         }
 
         /**
          * 执行同步请求
          * 适用于外部手动构造的 Request 对象的使用, 之前的链式方法调用均会被忽略
          * @param request      请求构造对象
-         * @param retryMaxTime 最大重试次数
+         * @param maxRetryTime 最大重试次数
+         * @return 响应
+         * @see HttpUtils setHttpRetryOption(HttpRetryOption httpRetryOption)
+         */
+        public HttpResult exec(Request request, int maxRetryTime) {
+            httpRetryOption.maxRetryTime = maxRetryTime;
+            return exec(request);
+        }
+
+        /**
+         * 执行同步请求
+         * 适用于外部手动构造的 Request 对象的使用, 之前的链式方法调用均会被忽略
+         * @param request 请求构造对象
          * @return 响应
          */
-        public HttpResult exec(Request request, int retryMaxTime) {
+        public HttpResult exec(Request request) {
             try {
                 // 请求日志记录
                 logProvider.printHttpConsumerSendingRequestLog(clientSendingRequestLogEnable, request, logBodyCache);
 
                 // 执行请求与网络错误重试
-                Response response = sync(request, retryMaxTime);
+                Response response = sync(request);
 
                 // 响应解析与包装
                 return analysisResponse(request, response);
@@ -469,30 +509,57 @@ public class HttpUtils {
             }
         }
 
+
         /**
          * 执行异步请求
-         * @param retryMaxTime      最大重试次数
+         * @param maxRetryTime      最大重试次数
          * @param callbackInterface 结果回调
          */
-        public void exec(int retryMaxTime, CallbackInterface callbackInterface) {
+        public void exec(int maxRetryTime, CallbackInterface callbackInterface) {
             // 请求构造
             Request request = requestBuild();
+            httpRetryOption.maxRetryTime = maxRetryTime;
+
             // 执行异步请求
-            exec(request, retryMaxTime, callbackInterface);
+            exec(request, callbackInterface);
+        }
+
+        /**
+         * 执行异步请求
+         * @param callbackInterface 结果回调
+         */
+        public void exec(CallbackInterface callbackInterface) {
+            // 请求构造
+            Request request = requestBuild();
+
+            // 执行异步请求
+            exec(request, callbackInterface);
         }
 
         /**
          * 执行异步请求
          * 适用于外部手动构造的 Request 对象的使用, 之前的链式方法调用均会被忽略
          * @param request           请求构造对象
-         * @param retryMaxTime      最大重试次数
+         * @param maxRetryTime      最大重试次数
          * @param callbackInterface 结果回调
          */
-        public void exec(Request request, int retryMaxTime, CallbackInterface callbackInterface) {
+        public void exec(Request request, int maxRetryTime, CallbackInterface callbackInterface) {
+            httpRetryOption.maxRetryTime = maxRetryTime;
+            exec(request, callbackInterface);
+        }
+
+        /**
+         * 执行异步请求
+         * 适用于外部手动构造的 Request 对象的使用, 之前的链式方法调用均会被忽略
+         * @param request           请求构造对象
+         * @param callbackInterface 结果回调
+         */
+        public void exec(Request request, CallbackInterface callbackInterface) {
             // 请求日志记录
             logProvider.printHttpConsumerSendingRequestLog(clientSendingRequestLogEnable, request, logBodyCache);
+
             // 执行异步请求与网络错误重试
-            async(request, 0, retryMaxTime, callbackInterface);
+            async(request, 1, callbackInterface);
         }
 
         /**
@@ -594,25 +661,19 @@ public class HttpUtils {
 
         /**
          * 执行同步请求
-         * @param request      请求
-         * @param retryMaxTime 最大重试次数
+         * @param request 请求
          * @return 响应
-         * @throws IOException       异常
-         * @throws BusinessException 异常
+         * @throws Throwable 原始异常
          */
-        protected Response sync(Request request, int retryMaxTime) throws IOException, BusinessException {
-            for (int retryTime = 1; retryTime <= retryMaxTime + 1; retryTime++) {
+        protected Response sync(Request request) throws Throwable {
+            for (int currentRetryTime = 1; currentRetryTime <= httpRetryOption.maxRetryTime + 1; currentRetryTime++) {
                 try {
                     return httpClient.newCall(request).execute();
                 } catch (Throwable e) {
-                    if (retryTime > retryMaxTime) {
-                        // 重试失败日志记录
-                        logProvider.printHttpConsumerSendingRequestRetryGiveUpLog(clientSendingRequestRetryLogEnable, retryTime - 1);
-
+                    retryHoldOn(currentRetryTime, () -> {
+                    }, () -> {
                         throw e;
-                    }
-                    // 重试日志记录
-                    logProvider.printHttpConsumerSendingRequestRetryLog(clientSendingRequestRetryLogEnable, retryTime, retryMaxTime);
+                    });
                 }
             }
             throw new BusinessException(StatusCode.HTTP_REQUEST_API_RETRY_TIME_ERROR);
@@ -621,13 +682,12 @@ public class HttpUtils {
         /**
          * 执行异步请求
          * @param request           请求
-         * @param retryTime         当前重试次数
-         * @param retryMaxTime      最大重试次数
+         * @param currentRetryTime  当前重试次数
          * @param callbackInterface 结果回调
          */
-        protected void async(Request request, int retryTime, int retryMaxTime, CallbackInterface callbackInterface) {
+        protected void async(Request request, int currentRetryTime, CallbackInterface callbackInterface) {
 
-            int nextRetryTime = retryTime + 1;
+            int nextRetryTime = currentRetryTime + 1;
 
             Map<String, Object> mdcInfo = new HashMap<>(16);
             // 获取MDC中的信息
@@ -636,33 +696,28 @@ public class HttpUtils {
             httpClient.newCall(request).enqueue(new Callback() {
 
                 @Override
-                public void onFailure(Call call, IOException e) {
+                public void onFailure(@NotNull Call call, @NotNull IOException e) {
                     // 将指定map中的所有有效"键"与"值"，赋值到MDC
                     ChainProvider.initMDC(mdcInfo);
 
-                    if (nextRetryTime <= retryMaxTime) {
-
-                        // 重试日志记录
-                        logProvider.printHttpConsumerSendingRequestRetryLog(clientSendingRequestRetryLogEnable, retryTime, retryMaxTime);
-
-                        // 执行异步请求
-                        async(request, nextRetryTime, retryMaxTime, callbackInterface);
-                    } else {
-                        // 重试失败日志记录
-                        logProvider.printHttpConsumerSendingRequestRetryGiveUpLog(clientSendingRequestRetryLogEnable, retryTime);
-
-                        callbackInterface.call(null,
-                            new BusinessException(StatusCode.HTTP_REQUEST_API_ERROR, map -> map.put("request", request.toString()), e));
+                    try {
+                        retryHoldOn(currentRetryTime,
+                            () -> async(request, nextRetryTime, callbackInterface),
+                            () -> callbackInterface.call(null,
+                                new BusinessException(StatusCode.HTTP_REQUEST_API_ERROR, map -> map.put("request", request.toString()), e)));
+                    } catch (Throwable throwable) {
+                        // 此处绝不应该出现异常
+                        throw new BusinessException(e);
+                    } finally {
+                        // 清除
+                        ChainProvider.clear();
                     }
-                    // 清除
-                    ChainProvider.clear();
                 }
 
                 @Override
-                public void onResponse(Call call, Response response) {
+                public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
                     // 将指定map中的所有有效"键"与"值"，赋值到MDC
                     ChainProvider.initMDC(mdcInfo);
-
                     callbackInterface.call(analysisResponse(request, response), null);
                     // 清除
                     ChainProvider.clear();
@@ -696,6 +751,56 @@ public class HttpUtils {
                 throw new BusinessException(StatusCode.HTTP_REQUEST_BODY_TYPE_VALIDATION_FAIL);
             }
         }
+
+        /**
+         * 重试控制
+         * @param currentRetryTime 当前是第几次重试
+         * @param runnable         重试成功后执行
+         * @param failRunnable     重试失败后执行
+         */
+        protected void retryHoldOn(int currentRetryTime, RunnableWithThrowableInterface runnable,
+            RunnableWithThrowableInterface failRunnable) throws Throwable {
+            // 没有重试次数
+            if (currentRetryTime > httpRetryOption.maxRetryTime) {
+                // 重试失败日志记录
+                logProvider.printHttpConsumerSendingRequestRetryGiveUpLog(clientSendingRequestRetryLogEnable, currentRetryTime - 1);
+                failRunnable.run();
+                return;
+            }
+
+            // 延迟重试
+            try {
+                Thread.sleep(calculationInterval(currentRetryTime, httpRetryOption.retryAfter, httpRetryOption.incrementMultiple,
+                    httpRetryOption.basicInterval, httpRetryOption.maxInterval));
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+                // 重试失败日志记录
+                logProvider.printHttpConsumerSendingRequestRetryGiveUpLog(clientSendingRequestRetryLogEnable, currentRetryTime - 1);
+                failRunnable.run();
+                return;
+            }
+
+            // 重试日志记录
+            logProvider.printHttpConsumerSendingRequestRetryLog(clientSendingRequestRetryLogEnable, currentRetryTime, httpRetryOption.maxRetryTime);
+
+            runnable.run();
+        }
+    }
+
+    /**
+     * 计算间隔时间
+     * @param currentRetryTime  当前第几次重试
+     * @param retryAfter        首次重试时, 间隔时间 单位ms
+     * @param incrementMultiple 每次重试间隔时间 递增倍数
+     * @param basicInterval     重试基本间隔
+     * @param maxInterval       最大重试间隔 0表示不限制
+     * @return 当前的重试间隔
+     */
+    public static long calculationInterval(int currentRetryTime, long retryAfter, double incrementMultiple, long basicInterval, long maxInterval) {
+        long currentInterval = (currentRetryTime == 1 && retryAfter > 0)
+            ? retryAfter
+            : (long) (basicInterval * Math.pow(incrementMultiple, currentRetryTime - 1));
+        return maxInterval <= 0 ? currentInterval : Math.min(currentInterval, maxInterval);
     }
 
     /**
@@ -742,8 +847,9 @@ public class HttpUtils {
         if (HttpUtils.containGzipInHeader(responseHeaderMap)) {
             return HttpUtils.gzipDecode(content);
         }
-        return Arrays.toString(content);
+        return new String(content);
     }
+
 
     /**
      * 回调
@@ -758,6 +864,19 @@ public class HttpUtils {
          * @param throwable  请求异常
          */
         void call(@Nullable HttpResult httpResult, @Nullable BusinessException throwable);
+    }
+
+    /**
+     * 回调
+     */
+    @FunctionalInterface
+    public interface RunnableWithThrowableInterface {
+
+        /**
+         * 执行
+         * @throws Throwable 异常
+         */
+        void run() throws Throwable;
     }
 
     /**
@@ -795,6 +914,79 @@ public class HttpUtils {
         MEDIA_TYPE
     }
 
+    /**
+     * http请求, 重试配置
+     */
+    public static class HttpRetryOption implements Serializable {
+
+        private static final long serialVersionUID = 1L;
+
+        /**
+         * 最大重试次数
+         */
+        private int maxRetryTime = 0;
+
+        /**
+         * 首次重试时, 间隔时间 单位ms
+         */
+        private long retryAfter = 0L;
+
+        /**
+         * 基础重试间隔时间 单位ms
+         */
+        private long basicInterval = 10L;
+
+        /**
+         * 每次重试最大间隔时间(小于等于0时, 表示不限制) 单位ms
+         */
+        private long maxInterval = 0L;
+
+        /**
+         * 每次重试间隔时间 递增倍数
+         */
+        private double incrementMultiple = 1.5;
+
+
+        public int getMaxRetryTime() {
+            return maxRetryTime;
+        }
+
+        public void setMaxRetryTime(int maxRetryTime) {
+            this.maxRetryTime = maxRetryTime;
+        }
+
+        public long getRetryAfter() {
+            return retryAfter;
+        }
+
+        public void setRetryAfter(long retryAfter) {
+            this.retryAfter = retryAfter;
+        }
+
+        public long getBasicInterval() {
+            return basicInterval;
+        }
+
+        public void setBasicInterval(long basicInterval) {
+            this.basicInterval = basicInterval;
+        }
+
+        public long getMaxInterval() {
+            return maxInterval;
+        }
+
+        public void setMaxInterval(long maxInterval) {
+            this.maxInterval = maxInterval;
+        }
+
+        public double getIncrementMultiple() {
+            return incrementMultiple;
+        }
+
+        public void setIncrementMultiple(double incrementMultiple) {
+            this.incrementMultiple = incrementMultiple;
+        }
+    }
 
     /**
      * http响应

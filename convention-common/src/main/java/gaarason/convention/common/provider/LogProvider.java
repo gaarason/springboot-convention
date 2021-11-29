@@ -13,8 +13,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.Nullable;
 
 import javax.annotation.Resource;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -63,7 +61,16 @@ public class LogProvider {
             synchronized (LogProvider.class) {
                 localIns = LogProvider.instance;
                 if (localIns == null) {
-                    localIns = LogProvider.instance = SpringUtils.getBean("logProvider");
+                    try {
+                        localIns = LogProvider.instance = SpringUtils.getBean("logProvider");
+                    } catch (Throwable e) {
+                        LOGGER.warn("Not found LogProvider instance in Spring.", e);
+                        localIns = LogProvider.instance = new LogProvider();
+                        localIns.conventionProperties = new ConventionProperties();
+                        localIns.serverPort = 8080;
+                        localIns.swaggerBaseUrl = "";
+                        localIns.swaggerEnable = false;
+                    }
                 }
             }
         }
@@ -202,18 +209,18 @@ public class LogProvider {
 
     /**
      * 记录日志 客户端发送 http 请求, 重试失败
-     * @param enable 是否启用, DEFAULT 表示使用全局配置
+     * @param enable    是否启用, DEFAULT 表示使用全局配置
      * @param retryTime 已经进行的重试次数
      */
     public void printHttpConsumerSendingRequestRetryGiveUpLog(FinalVariable.Bool enable, final int retryTime) {
-        if(enable == FinalVariable.Bool.TRUE || (enable == FinalVariable.Bool.DEFAULT && conventionProperties.getHttp().getLog().isConsumerSendingRequestRetry())){
+        if (enable == FinalVariable.Bool.TRUE || (enable == FinalVariable.Bool.DEFAULT && conventionProperties.getHttp().getLog().isConsumerSendingRequestRetry())) {
             LogProvider.LOGGER.info("Http client sending request, it has been retried {} times, now give up.", retryTime);
         }
     }
 
     /**
      * 记录日志 客户端发送 http 请求, 重试日志
-     * @param enable 是否启用, DEFAULT 表示使用全局配置
+     * @param enable       是否启用, DEFAULT 表示使用全局配置
      * @param retryTime    当前第几次重试
      * @param retryMaxTime 最大重试次数请求
      */
@@ -225,7 +232,7 @@ public class LogProvider {
 
     /**
      * 记录日志 客户端发送 http 请求
-     * @param enable 是否启用, DEFAULT 表示使用全局配置
+     * @param enable     是否启用, DEFAULT 表示使用全局配置
      * @param request    请求
      * @param bodyString 请求体日志字符串
      */
@@ -248,18 +255,20 @@ public class LogProvider {
 
     /**
      * 记录日志 客户端接收 http 响应
-     * @param enable 是否启用, DEFAULT 表示使用全局配置
+     * @param enable             是否启用, DEFAULT 表示使用全局配置
      * @param request            请求
      * @param response           响应
      * @param responseBodyString 响应体字符串
      */
-    public void printHttpConsumerReceivedResponseLog(FinalVariable.Bool enable, Request request, Response response, Supplier<String> responseBodyString) {
+    public void printHttpConsumerReceivedResponseLog(FinalVariable.Bool enable, Request request, Response response,
+        Supplier<String> responseBodyString) {
         if (isPrintHttpConsumerReceivedResponseLog(enable)) {
             LogProvider.LOGGER.info("Http client received response, request[{}], response[{}], response header[{}], response body[{}].",
                 request.toString(),
                 response.toString(), response.headers().toMultimap(), responseBodyString.get());
         }
     }
+
     /**
      * 记录日志 服务端接收 dubbo 请求
      */
