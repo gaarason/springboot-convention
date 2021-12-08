@@ -1,8 +1,11 @@
 package gaarason.convention.common.model.exception;
 
 import org.springframework.lang.Nullable;
+import org.springframework.util.ReflectionUtils;
 
 import java.io.Serializable;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.*;
 
 /**
@@ -32,6 +35,7 @@ public class BusinessException extends RuntimeException {
         this.code = code;
         this.error = error;
         makeDebug.run(debug);
+        overrideStackTrace();
     }
 
     public BusinessException(int code, @Nullable String message, @Nullable Serializable error, DebugFunctionalInterface makeDebug, Throwable e) {
@@ -39,14 +43,17 @@ public class BusinessException extends RuntimeException {
         this.code = code;
         this.error = error;
         makeDebug.run(debug);
+        overrideStackTrace();
     }
 
     public BusinessException(int code, String message) {
-        this(code, message, null, map -> {});
+        this(code, message, null, map -> {
+        });
     }
 
     public BusinessException(int code, String message, Throwable e) {
-        this(code, message, null, map -> {}, e);
+        this(code, message, null, map -> {
+        }, e);
     }
 
     public BusinessException(StatusCode statusCode, Serializable error, DebugFunctionalInterface makeDebug) {
@@ -136,16 +143,34 @@ public class BusinessException extends RuntimeException {
         return debug;
     }
 
-    @Override
-    public StackTraceElement[] getStackTrace() {
-        StackTraceElement[] stackTrace = super.getStackTrace();
-        List<StackTraceElement> stackTraceElements = new ArrayList<>(Arrays.asList(stackTrace));
+    /**
+     * 执行 Throwable 中的 getOurStackTrace 方法, 并返回 Throwable 中的 stackTrace 属性
+     * @return Throwable 中的 stackTrace 属性
+     */
+    private StackTraceElement[] getOurStackTrace() {
+        final Method getOurStackTrace = ReflectionUtils.findMethod(Throwable.class, "getOurStackTrace");
+        assert getOurStackTrace != null;
+        ReflectionUtils.makeAccessible(getOurStackTrace);
+        final Object res = ReflectionUtils.invokeMethod(getOurStackTrace, this);
+        assert res != null;
+        return (StackTraceElement[]) res;
+    }
 
-        if(error != null){
+    /**
+     * 重写 Throwable 中的 stackTrace 属性
+     */
+    private void overrideStackTrace() {
+        final Field stackTraceField = ReflectionUtils.findField(Throwable.class, "stackTrace");
+        assert stackTraceField != null;
+        ReflectionUtils.makeAccessible(stackTraceField);
+        final StackTraceElement[] stackTraceElementArray = getOurStackTrace();
+        List<StackTraceElement> stackTraceElements = new ArrayList<>(Arrays.asList(stackTraceElementArray));
+        if (error != null) {
             stackTraceElements.add(new StackTraceElement(getClass().toString().replace("class ", ""), "ERROR", error.toString(), 1));
         }
         stackTraceElements.add(new StackTraceElement(getClass().toString().replace("class ", ""), "DEBUG", debug.toString(), debug.size()));
-        return stackTraceElements.toArray(new StackTraceElement[0]);
+        final StackTraceElement[] elements = stackTraceElements.toArray(new StackTraceElement[0]);
+        ReflectionUtils.setField(stackTraceField, this, elements);
     }
 
     @FunctionalInterface

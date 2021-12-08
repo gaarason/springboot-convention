@@ -298,7 +298,7 @@ public class ConventionProperties implements Serializable {
          * json文件日志格式
          */
         private String jsonPattern =
-            "{\"@timestamp\":\"%d{yyyy-MM-dd HH:mm:ss.SSS}\",\"level\":\"%level\",\"thread\":\"%thread\",\"class\":\"%c\",\"trace_id\":\"%X{CAN_CROSS_PROCESS|TRACE_ID}\",\"tenant_code\":\"%X{CAN_CROSS_PROCESS|TENANT_CODE}\",\"tenant_id\":\"%X{CAN_CROSS_PROCESS|TENANT_ID}\",\"user_id\":\"%X{CAN_CROSS_PROCESS|USER_ID}\",\"user_account\":\"%X{CAN_CROSS_PROCESS|USER_ACCOUNT}\",\"msg\":\"%msg\",\"exception\":\"%exception\",\"application\":\"${sys:spring.application.name}\",\"env\":\"${sys:spring.profiles.active}\"}%n";
+            "{\"@timestamp\":\"%d{yyyy-MM-dd HH:mm:ss.SSS}\",\"level\":\"%level\",\"thread\":\"%thread\",\"class\":\"%c\",\"trace_id\":\"%X{CAN_CROSS_PROCESS|TRACE_ID}\",\"tenant_code\":\"%X{CAN_CROSS_PROCESS|TENANT_CODE}\",\"tenant_id\":\"%X{CAN_CROSS_PROCESS|TENANT_ID}\",\"user_id\":\"%X{CAN_CROSS_PROCESS|USER_ID}\",\"user_account\":\"%X{CAN_CROSS_PROCESS|USER_ACCOUNT}\",\"msg\":\"%msg\",\"exception\":\"%exception\",\"application\":\"@@{application}##\",\"env\":\"@@{env}##\"}%n";
 
         /**
          * json文件日志级别

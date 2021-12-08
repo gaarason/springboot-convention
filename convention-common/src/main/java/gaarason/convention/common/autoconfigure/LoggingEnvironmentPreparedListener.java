@@ -10,6 +10,8 @@ import org.springframework.core.Ordered;
 import org.springframework.core.env.ConfigurableEnvironment;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -41,28 +43,33 @@ public class LoggingEnvironmentPreparedListener implements ApplicationListener<A
     private void turnProperties(ApplicationEnvironmentPreparedEvent event) {
         final ConfigurableEnvironment environment = event.getEnvironment();
         final ConventionProperties.LogSpring logSpring = DEFAULT_PROPERTIES.getLogSpring();
-        // springApplicationName
-        final String springApplicationName =
+
+        final Map<String, String> map = valueSubstitutionMap(event);
+
+        SpringUtils.turnSpringPropertyToSystem(environment, map, "convention.log-spring.file-dir", logSpring.getFileDir());
+
+        SpringUtils.turnSpringPropertyToSystem(environment, map, "convention.log-spring.console-pattern", logSpring.getConsolePattern());
+
+        SpringUtils.turnSpringPropertyToSystem(environment, map, "convention.log-spring.console-level", logSpring.getConsoleLevel());
+
+        SpringUtils.turnSpringPropertyToSystem(environment, map, "convention.log-spring.json-pattern", logSpring.getJsonPattern());
+
+        SpringUtils.turnSpringPropertyToSystem(environment, map, "convention.log-spring.json-level", logSpring.getJsonLevel());
+
+        SpringUtils.turnSpringPropertyToSystem(environment, map, "convention.log-spring.skywalking-pattern", logSpring.getSkywalkingPattern());
+
+        SpringUtils.turnSpringPropertyToSystem(environment, map, "convention.log-spring.skywalking-level", logSpring.getSkywalkingLevel());
+  }
+
+    private Map<String, String> valueSubstitutionMap(ApplicationEnvironmentPreparedEvent event) {
+        final HashMap<String, String> map = new HashMap<>(16);
+        map.put("application",
             Arrays.stream(FinalVariable.APPLICATION_NAME_KEY).map(key -> event.getEnvironment().getProperty(key)).filter(Objects::nonNull)
-                .limit(1).reduce((s, d) -> s).orElse("No application name found");
-        System.setProperty("spring.application.name", springApplicationName);
-
-        SpringUtils.turnSpringPropertyToSystem(environment, "spring.profiles.active", "default");
-
-        SpringUtils.turnSpringPropertyToSystem(environment, "convention.log-spring.file-dir", logSpring.getFileDir());
-
-        SpringUtils.turnSpringPropertyToSystem(environment, "convention.log-spring.console-pattern", logSpring.getConsolePattern());
-
-        SpringUtils.turnSpringPropertyToSystem(environment, "convention.log-spring.console-level", logSpring.getConsoleLevel());
-
-        SpringUtils.turnSpringPropertyToSystem(environment, "convention.log-spring.json-pattern", logSpring.getJsonPattern());
-
-        SpringUtils.turnSpringPropertyToSystem(environment, "convention.log-spring.json-level", logSpring.getJsonLevel());
-
-        SpringUtils.turnSpringPropertyToSystem(environment, "convention.log-spring.skywalking-pattern", logSpring.getSkywalkingPattern());
-
-        SpringUtils.turnSpringPropertyToSystem(environment, "convention.log-spring.skywalking-level", logSpring.getSkywalkingLevel());
+                .limit(1).reduce((s, d) -> s).orElse("No application name found"));
+        map.put("env", event.getEnvironment().getProperty("spring.profiles.active", "default"));
+        return map;
     }
+
 
     @Override
     public int getOrder() {

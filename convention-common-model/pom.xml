@@ -35,5 +35,11 @@
 <!--            <groupId>org.slf4j</groupId>-->
 <!--            <artifactId>slf4j-api</artifactId>-->
 <!--        </dependency>-->
+
+        <dependency>
+            <groupId>com.github.gaarason</groupId>
+            <artifactId>convention-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

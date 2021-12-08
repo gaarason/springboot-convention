@@ -165,18 +165,22 @@ public final class SpringUtils {
     }
 
     /**
-     * 将spring的配置,转入到system, 不存在时, 使用默认值
-     * @param environment  环境
-     * @param propertyName 配置名
-     * @param defaultValue 默认值
+     * 将spring的配置,转入到system, 不存在时, 使用默认值(占位符替换)
+     * @param environment          环境
+     * @param valueSubstitutionMap 变量替换map
+     * @param propertyName         配置名
+     * @param defaultValue         默认值
      */
-    public static void turnSpringPropertyToSystem(ConfigurableEnvironment environment, String propertyName, String defaultValue) {
+    public static void turnSpringPropertyToSystem(ConfigurableEnvironment environment, Map<String, String> valueSubstitutionMap, String propertyName,
+        String defaultValue) {
         String springPropertyValue = environment.getProperty(propertyName);
         if (org.springframework.util.StringUtils.hasText(springPropertyValue)) {
             System.setProperty(propertyName, springPropertyValue);
         } else {
+            for (Map.Entry<String, String> entry : valueSubstitutionMap.entrySet()) {
+                defaultValue = defaultValue.replace("@@{" + entry.getKey() + "}##", entry.getValue());
+            }
             System.setProperty(propertyName, defaultValue);
         }
-
     }
 }
